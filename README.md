@@ -20,6 +20,39 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Docker Compose Setup
+
+This project uses PostgreSQL for its database. Before running the development server, you need to start the database using Docker Compose.
+
+**Prerequisites:**
+- [Docker Desktop](https://www.docker.com/products/docker-desktop) must be installed and running
+
+**Steps:**
+
+1. Start the PostgreSQL database in a terminal:
+
+```bash
+docker-compose up
+```
+
+The output will show that PostgreSQL is ready to accept connections.
+
+2. In a **new terminal**, run the development server:
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+**To stop the services:**
+
+Press `Ctrl+C` in the docker-compose terminal, or run:
+
+```bash
+docker-compose down
+```
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
