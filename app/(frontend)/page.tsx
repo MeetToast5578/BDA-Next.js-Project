@@ -29,6 +29,11 @@ export default async function HomePage() {
         </picture>
         {!user && <h1>Welcome to your new project.</h1>}
         {user && <h1>Welcome back, {user.email}</h1>}
+        {!user && (
+          <form action="/api/auth/google" method="get">
+            <button type="submit">Continue with Google</button>
+          </form>
+        )}
         <div className="links">
           <a
             className="admin"
