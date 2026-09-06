@@ -3,6 +3,7 @@ import type { CollectionConfig, CollectionSlug } from 'payload'
 export const Games: CollectionConfig = {
   slug: 'games',
   access: {
+    read: () => true,
     create: ({ req }) => Boolean(req.user),
   },
   defaultPopulate: {
@@ -26,6 +27,13 @@ export const Games: CollectionConfig = {
         { label: 'Basketball', value: 'basketball' },
         { label: 'Tennis', value: 'tennis' },
       ],
+    },
+    {
+      name: 'image',
+      type: 'text',
+      admin: {
+        description: 'Public image path used on the game cards.',
+      },
     },
     {
       name: 'arena',
