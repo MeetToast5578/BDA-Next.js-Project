@@ -20,6 +20,34 @@ export const Arena: CollectionConfig = {
       required: true,
     },
     {
+      name: 'district',
+      type: 'text',
+      admin: {
+        description: 'City district or neighborhood where the venue is located.',
+      },
+    },
+    {
+      name: 'address',
+      type: 'text',
+    },
+    {
+      name: 'coordinates',
+      type: 'text',
+      admin: {
+        description: 'Latitude and longitude separated by a comma, for example 40.3755,49.8335.',
+      },
+    },
+    {
+      name: 'sportTypes',
+      type: 'select',
+      hasMany: true,
+      options: [
+        { label: 'Football', value: 'football' },
+        { label: 'Basketball', value: 'basketball' },
+        { label: 'Tennis', value: 'tennis' },
+      ],
+    },
+    {
       name: 'capacity',
       type: 'number',
       min: 1,
