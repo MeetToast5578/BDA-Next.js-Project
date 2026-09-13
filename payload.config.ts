@@ -10,6 +10,8 @@ import { Media } from "./collections/Media";
 import { Arena } from "./collections/Arena";
 import { Teams } from "./collections/Teams";
 import { Games } from "./collections/Games";
+import { GameParticipants } from "./collections/GameParticipants";
+import { JoinAttempts } from "./collections/JoinAttempts";
 
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
@@ -21,7 +23,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Arena, Teams, Games],
+  collections: [Users, Media, Arena, Teams, Games, GameParticipants, JoinAttempts],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || "",
   typescript: {

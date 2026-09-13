@@ -9,6 +9,8 @@ A [Next.js](https://nextjs.org) app with [Payload CMS](https://payloadcms.com) a
    ```
    PAYLOAD_SECRET=<any random string>
    DATABASE_URL=<postgres connection string>
+   # Optional: CDN origin that serves /api/media/*, used in API image URLs
+   MEDIA_BASE_URL=https://cdn.example.com
    ```
 
 2. Install and run:
@@ -20,6 +22,8 @@ A [Next.js](https://nextjs.org) app with [Payload CMS](https://payloadcms.com) a
 
 - App: [http://localhost:3000](http://localhost:3000)
 - Payload admin: [http://localhost:3000/admin](http://localhost:3000/admin)
+- Seed sample venues and games (dev only): `curl -X POST http://localhost:3000/api/seed-games` while the dev server runs
+- API reference: [docs/api.md](docs/api.md)
 
 ## Structure
 
@@ -43,4 +47,5 @@ A [Next.js](https://nextjs.org) app with [Payload CMS](https://payloadcms.com) a
 | `npm run build`         | Production build                              |
 | `npm start`             | Serve the production build                    |
 | `npm run lint`          | Run ESLint                                    |
+| `npm test`              | Run the Vitest suite (join tests use `DATABASE_URL`) |
 | `npm run contract:emit` | Regenerate the Prisma contract                |

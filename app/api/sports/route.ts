@@ -1,28 +1,18 @@
 import { NextResponse } from 'next/server'
 
-import { getGameDocs } from '@/lib/game-backend'
+import { normalizeCity } from '@/lib/game-backend'
+import { getOpenGamesCountBySport } from '@/lib/game-queries'
 
-export async function GET() {
+export async function GET(request: Request) {
+  const city = normalizeCity(new URL(request.url).searchParams.get('city'))
+  if (!city) {
+    return NextResponse.json({ error: { code: 'UNKNOWN_CITY', message: 'Unknown city.' } }, { status: 400 })
+  }
+
   try {
-    const games = await getGameDocs()
-    const openGames = games.filter((game) => game.availability.status === 'open' || (game.status === 'scheduled' && game.remainingSpots > 0))
-
-    const sportsMap = new Map<string, { sport: string; label: string; icon: string; openGames: number }>()
-
-    for (const game of openGames) {
-      const current = sportsMap.get(game.sport) ?? {
-        sport: game.sport,
-        label: game.sportLabel,
-        icon: game.icon,
-        openGames: 0,
-      }
-
-      current.openGames += 1
-      sportsMap.set(game.sport, current)
-    }
-
-    return NextResponse.json(Array.from(sportsMap.values()))
-  } catch {
-    return NextResponse.json([], { status: 500 })
+    return NextResponse.json(await getOpenGamesCountBySport(city))
+  } catch (error) {
+    console.error(error)
+    return NextResponse.json({ error: { code: 'INTERNAL_ERROR', message: 'Unable to load sports.' } }, { status: 500 })
   }
 }

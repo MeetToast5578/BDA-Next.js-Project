@@ -72,6 +72,8 @@ export interface Config {
     arenas: Arena;
     teams: Team;
     games: Game;
+    'game-participants': GameParticipant;
+    'join-attempts': JoinAttempt;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -84,6 +86,8 @@ export interface Config {
     arenas: ArenasSelect<false> | ArenasSelect<true>;
     teams: TeamsSelect<false> | TeamsSelect<true>;
     games: GamesSelect<false> | GamesSelect<true>;
+    'game-participants': GameParticipantsSelect<false> | GameParticipantsSelect<true>;
+    'join-attempts': JoinAttemptsSelect<false> | JoinAttemptsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -171,6 +175,24 @@ export interface Media {
   height?: number | null;
   focalX?: number | null;
   focalY?: number | null;
+  sizes?: {
+    thumbnail?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+    full?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+  };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -180,6 +202,10 @@ export interface Arena {
   id: number;
   name: string;
   location: string;
+  /**
+   * Used by the city filter on /api/sports, /api/games and /api/games/featured.
+   */
+  city?: 'baku' | null;
   /**
    * City district or neighborhood where the venue is located.
    */
@@ -217,7 +243,11 @@ export interface Game {
   title: string;
   sport: 'football' | 'basketball' | 'tennis';
   /**
-   * Public image path used on the game cards.
+   * Cover shown on game cards, served as thumbnail and full-size WebP.
+   */
+  coverImage?: (number | null) | Media;
+  /**
+   * Fallback public image path, used when no cover image is uploaded. Without either, the sport's default image is used.
    */
   image?: string | null;
   arena: number | Arena;
@@ -231,6 +261,49 @@ export interface Game {
   homeScore?: number | null;
   awayScore?: number | null;
   status?: ('scheduled' | 'live' | 'finished' | 'cancelled') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Players who joined a game. Created by the join endpoint, which also decrements the game's available spots.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "game-participants".
+ */
+export interface GameParticipant {
+  id: number;
+  game: number | Game;
+  user: number | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Audit log of join requests. Read-only; written by the join endpoint.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "join-attempts".
+ */
+export interface JoinAttempt {
+  id: number;
+  outcome:
+    | 'JOINED'
+    | 'GAME_FULL'
+    | 'GAME_NOT_JOINABLE'
+    | 'GAME_NOT_FOUND'
+    | 'ALREADY_JOINED'
+    | 'UNAUTHENTICATED'
+    | 'INVALID_REQUEST'
+    | 'ERROR';
+  /**
+   * Requested game ID. Stored as a number so attempts on missing games are logged too.
+   */
+  gameId?: number | null;
+  user?: (number | null) | User;
+  /**
+   * Spots left after a successful join.
+   */
+  remainingSpots?: number | null;
+  ip?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -277,6 +350,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'games';
         value: number | Game;
+      } | null)
+    | ({
+        relationTo: 'game-participants';
+        value: number | GameParticipant;
+      } | null)
+    | ({
+        relationTo: 'join-attempts';
+        value: number | JoinAttempt;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -364,6 +445,30 @@ export interface MediaSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+  sizes?:
+    | T
+    | {
+        thumbnail?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+        full?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+      };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -372,6 +477,7 @@ export interface MediaSelect<T extends boolean = true> {
 export interface ArenasSelect<T extends boolean = true> {
   name?: T;
   location?: T;
+  city?: T;
   district?: T;
   address?: T;
   coordinates?: T;
@@ -400,6 +506,7 @@ export interface TeamsSelect<T extends boolean = true> {
 export interface GamesSelect<T extends boolean = true> {
   title?: T;
   sport?: T;
+  coverImage?: T;
   image?: T;
   arena?: T;
   level?: T;
@@ -412,6 +519,29 @@ export interface GamesSelect<T extends boolean = true> {
   homeScore?: T;
   awayScore?: T;
   status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "game-participants_select".
+ */
+export interface GameParticipantsSelect<T extends boolean = true> {
+  game?: T;
+  user?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "join-attempts_select".
+ */
+export interface JoinAttemptsSelect<T extends boolean = true> {
+  outcome?: T;
+  gameId?: T;
+  user?: T;
+  remainingSpots?: T;
+  ip?: T;
   updatedAt?: T;
   createdAt?: T;
 }

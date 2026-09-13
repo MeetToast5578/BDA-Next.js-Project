@@ -1,10 +1,15 @@
 import type { CollectionConfig } from 'payload'
 
+import { invalidateGamesCache } from '../lib/cache-tags'
+import { isAdminOrHost } from './access'
+
 export const Games: CollectionConfig = {
   slug: 'games',
   access: {
     read: () => true,
     create: ({ req }) => Boolean(req.user),
+    update: isAdminOrHost,
+    delete: isAdminOrHost,
   },
   defaultPopulate: {
     host: true,
@@ -29,10 +34,18 @@ export const Games: CollectionConfig = {
       ],
     },
     {
+      name: 'coverImage',
+      type: 'upload',
+      relationTo: 'media',
+      admin: {
+        description: 'Cover shown on game cards, served as thumbnail and full-size WebP.',
+      },
+    },
+    {
       name: 'image',
       type: 'text',
       admin: {
-        description: 'Public image path used on the game cards.',
+        description: 'Fallback public image path, used when no cover image is uploaded. Without either, the sport\'s default image is used.',
       },
     },
     {
@@ -125,5 +138,13 @@ export const Games: CollectionConfig = {
         return data
       },
     ],
+    afterChange: [({ doc }) => {
+      invalidateGamesCache()
+      return doc
+    }],
+    afterDelete: [({ doc }) => {
+      invalidateGamesCache()
+      return doc
+    }],
   },
 }

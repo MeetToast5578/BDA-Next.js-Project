@@ -2,6 +2,7 @@ import { getPayload } from 'payload'
 import { NextResponse } from 'next/server'
 
 import config from '@/payload.config'
+import { BAKU_UTC_OFFSET } from '@/lib/game-backend'
 
 type PayloadRecord = Record<string, unknown> & { id: string | number }
 type PayloadClient = {
@@ -42,8 +43,11 @@ export async function POST(request: Request) {
       collection: 'games', overrideAccess: true,
       data: {
         title: `${body.sport} oyunu`, sport, level, image: sportImages[sport],
-        scheduledAt: `${body.scheduledDate}T${body.scheduledTime}:00.000Z`,
-        maxPlayers: Number(body.maxPlayers), availablePlayers: Number(body.availablePlayers || 0),
+        // The form's date and time are Baku local time.
+        scheduledAt: `${body.scheduledDate}T${body.scheduledTime}:00${BAKU_UTC_OFFSET}`,
+        maxPlayers: Number(body.maxPlayers),
+        // A new game starts with every spot free unless the form says otherwise.
+        availablePlayers: Number(body.availablePlayers || body.maxPlayers),
         arena: arena.id, host: host.id, homeTeam: team.id, awayTeam: team.id,
       },
     })
