@@ -18,10 +18,12 @@
     "@prisma/orm-postgres": "^8.0.0-rc.11",
     "dotenv": "^17.4.2",
     "graphql": "^16.14.2",
+    "jose": "^5.10.0",
     "next": "16.3.4",
     "payload": "^3.89.0",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "sharp": "^0.35.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
