@@ -57,6 +57,28 @@ export function formatRelativeTime(dateInput?: string | Date | null) {
   return diffDays > 0 ? `${Math.abs(diffDays)} gün sonra` : `${Math.abs(diffDays)} gün əvvəl`
 }
 
+export function formatBakuLabel(dateInput?: string | Date | null) {
+  if (!dateInput) return 'Təyin edilmədi'
+  const date = dateInput instanceof Date ? dateInput : new Date(dateInput)
+  if (Number.isNaN(date.getTime())) return 'Təyin edilmədi'
+
+  const tz = 'Asia/Baku'
+  const now = new Date()
+  const dayFmt = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' })
+  const todayStr = dayFmt.format(now)
+  const tomorrowStr = dayFmt.format(new Date(now.getTime() + 24 * 60 * 60 * 1000))
+  const dateStr = dayFmt.format(date)
+
+  const timeStr = new Intl.DateTimeFormat('az-AZ', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false }).format(date)
+
+  let dayLabel: string
+  if (dateStr === todayStr) dayLabel = 'Bu gün'
+  else if (dateStr === tomorrowStr) dayLabel = 'Sabah'
+  else dayLabel = new Intl.DateTimeFormat('az-AZ', { timeZone: tz, weekday: 'long' }).format(date)
+
+  return `${dayLabel} · ${timeStr}`
+}
+
 export function normalizeGameRecord(raw: Record<string, unknown> | null | undefined) {
   const sportValue = String(raw?.sport ?? 'football')
   const sportMeta = SPORT_META[sportValue] ?? SPORT_META.football
@@ -66,6 +88,15 @@ export function normalizeGameRecord(raw: Record<string, unknown> | null | undefi
   const maxPlayers = Number(raw?.maxPlayers ?? 0)
   const availablePlayers = Number(raw?.availablePlayers ?? Math.max(0, maxPlayers))
   const currentPlayers = Math.max(0, maxPlayers - availablePlayers)
+  const participantsRaw = Array.isArray(raw?.participants)
+    ? (raw.participants as Array<Record<string, unknown> | string | number>)
+    : []
+  const participantsPreview = participantsRaw.slice(0, 5).map((p) => {
+    const obj = typeof p === 'object' && p !== null ? (p as Record<string, unknown>) : {}
+    const name = String(obj['Full Name'] ?? obj.email ?? 'İstifadəçi')
+    return { name, initial: name.trim().charAt(0).toUpperCase() || '?' }
+  })
+  const participantsCount = participantsRaw.length
   const venue = {
     name: String(arena.name ?? 'Inter Arena'),
     district: String(arena.district ?? arena.location ?? 'Nərimanov'),
@@ -95,6 +126,10 @@ export function normalizeGameRecord(raw: Record<string, unknown> | null | undefi
     image: coverImageUrl,
     hostName: String(host['Full Name'] ?? host.email ?? 'OyunaGəl istifadəçisi'),
     hostEmail: host.email ? String(host.email) : null,
+    hostAvatarUrl:
+      host.profilePicture && typeof host.profilePicture === 'object' && 'url' in (host.profilePicture as Record<string, unknown>)
+        ? String((host.profilePicture as Record<string, unknown>).url)
+        : null,
     maxPlayers,
     availablePlayers,
     currentPlayers,
@@ -104,6 +139,8 @@ export function normalizeGameRecord(raw: Record<string, unknown> | null | undefi
     relativeTimeLabel: formatRelativeTime(raw?.scheduledAt ? String(raw.scheduledAt) : null),
     homeScore: Number(raw?.homeScore ?? 0),
     awayScore: Number(raw?.awayScore ?? 0),
+    participantsPreview,
+    participantsCount,
   }
 }
 
