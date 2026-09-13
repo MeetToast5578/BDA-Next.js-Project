@@ -69,6 +69,9 @@ export interface Config {
   collections: {
     users: User;
     media: Media;
+    arenas: Arena;
+    teams: Team;
+    games: Game;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -78,6 +81,9 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    arenas: ArenasSelect<false> | ArenasSelect<true>;
+    teams: TeamsSelect<false> | TeamsSelect<true>;
+    games: GamesSelect<false> | GamesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -168,6 +174,68 @@ export interface Media {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "arenas".
+ */
+export interface Arena {
+  id: number;
+  name: string;
+  location: string;
+  /**
+   * City district or neighborhood where the venue is located.
+   */
+  district?: string | null;
+  address?: string | null;
+  /**
+   * Latitude and longitude separated by a comma, for example 40.3755,49.8335.
+   */
+  coordinates?: string | null;
+  sportTypes?: ('football' | 'basketball' | 'tennis')[] | null;
+  capacity: number;
+  description?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "teams".
+ */
+export interface Team {
+  id: number;
+  name: string;
+  shortName?: string | null;
+  sport: 'football' | 'basketball' | 'tennis';
+  members?: (number | User)[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "games".
+ */
+export interface Game {
+  id: number;
+  title: string;
+  sport: 'football' | 'basketball' | 'tennis';
+  /**
+   * Public image path used on the game cards.
+   */
+  image?: string | null;
+  arena: number | Arena;
+  level: 'beginner' | 'medium' | 'high';
+  host: number | User;
+  'Team 1': number | Team;
+  'Team 2': number | Team;
+  scheduledAt: string;
+  maxPlayers: number;
+  availablePlayers: number;
+  homeScore?: number | null;
+  awayScore?: number | null;
+  status?: ('scheduled' | 'live' | 'finished' | 'cancelled') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -197,6 +265,18 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'media';
         value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'arenas';
+        value: number | Arena;
+      } | null)
+    | ({
+        relationTo: 'teams';
+        value: number | Team;
+      } | null)
+    | ({
+        relationTo: 'games';
+        value: number | Game;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -284,6 +364,56 @@ export interface MediaSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "arenas_select".
+ */
+export interface ArenasSelect<T extends boolean = true> {
+  name?: T;
+  location?: T;
+  district?: T;
+  address?: T;
+  coordinates?: T;
+  sportTypes?: T;
+  capacity?: T;
+  description?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "teams_select".
+ */
+export interface TeamsSelect<T extends boolean = true> {
+  name?: T;
+  shortName?: T;
+  sport?: T;
+  members?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "games_select".
+ */
+export interface GamesSelect<T extends boolean = true> {
+  title?: T;
+  sport?: T;
+  image?: T;
+  arena?: T;
+  level?: T;
+  host?: T;
+  'Team 1'?: T;
+  'Team 2'?: T;
+  scheduledAt?: T;
+  maxPlayers?: T;
+  availablePlayers?: T;
+  homeScore?: T;
+  awayScore?: T;
+  status?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

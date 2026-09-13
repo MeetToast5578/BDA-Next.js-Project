@@ -35,9 +35,6 @@ export async function GET(request: Request) {
     const pageDocs = filtered.slice((page - 1) * limit, page * limit)
 
     const games = pageDocs.map((game) => {
-      const gameData = game as any
-      const host = gameData.host ?? {}
-
       return {
         id: game.id,
         title: game.title,
@@ -51,8 +48,8 @@ export async function GET(request: Request) {
         status: game.status,
         coverImageUrl: game.coverImageUrl,
         host: {
-          name: host.name ?? gameData.hostName ?? '',
-          avatarUrl: host.avatarUrl ?? gameData.hostAvatarUrl ?? null,
+          name: game.hostName,
+          avatarUrl: null,
         },
       }
     })
