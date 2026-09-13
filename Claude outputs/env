@@ -1,3 +1,0 @@
-# Added by Payload
-PAYLOAD_SECRET=9f799df1ac8c4af5aca0e85f
-DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5433/my-app
