@@ -74,16 +74,30 @@ export const Games: CollectionConfig = {
       },
     },
     {
+      name: 'contactPhone',
+      type: 'text',
+      admin: {
+        description: 'Host\'s contact number. The API only shows it to players who joined and to the host.',
+      },
+      access: {
+        read: ({ req, doc }) => {
+          const user = req.user as { id: number | string; role?: string } | null
+          if (!user) return false
+          if (user.role === 'admin') return true
+          const host = doc?.host as { id?: number | string } | number | string | undefined
+          return (typeof host === 'object' ? host?.id : host) === user.id
+        },
+      },
+    },
+    {
       name: 'homeTeam',
       type: 'relationship',
       relationTo: 'teams',
-      required: true,
     },
     {
       name: 'awayTeam',
       type: 'relationship',
       relationTo: 'teams',
-      required: true,
     },
     {
       name: 'scheduledAt',

@@ -1,13 +1,39 @@
-import type { CollectionConfig } from 'payload'
+import { APIError, type CollectionConfig, type FieldAccess } from 'payload'
 import { jwtVerify } from 'jose'
+
+import { isAdmin, isAdminOrSelf } from './access'
+
+const MIN_PASSWORD_LENGTH = 8
+
+const adminOnlyField: FieldAccess = ({ req }) => (req.user as { role?: string } | undefined)?.role === 'admin'
 
 export const Users: CollectionConfig = {
   slug: 'users',
   access: {
     admin: ({ req }) => (req.user as { role?: string } | undefined)?.role === 'admin',
+    // Public sign-up for the registration page. `role` and `googleId` are admin-only fields,
+    // so a self-registered account is always a plain user and can't claim someone's Google login.
+    create: () => true,
+    // Accounts hold emails and phone numbers: users only see and edit their own.
+    read: isAdminOrSelf,
+    update: isAdminOrSelf,
+    delete: isAdmin,
   },
   admin: {
     useAsTitle: 'email',
+  },
+  hooks: {
+    beforeOperation: [
+      ({ args, operation }) => {
+        if (operation === 'create' || operation === 'update' || operation === 'resetPassword') {
+          const password = (args as { data?: { password?: unknown } }).data?.password
+          if (typeof password === 'string' && password.length < MIN_PASSWORD_LENGTH) {
+            throw new APIError(`Şifrə minimum ${MIN_PASSWORD_LENGTH} simvol olmalıdır.`, 400, undefined, true)
+          }
+        }
+        return args
+      },
+    ],
   },
   auth: {
     strategies: [
@@ -66,7 +92,8 @@ export const Users: CollectionConfig = {
         { label: 'Admin', value: 'admin' },
       ],
       access: {
-        update: ({ req }) => (req.user as { role?: string } | undefined)?.role === 'admin',
+        create: adminOnlyField,
+        update: adminOnlyField,
       },
     },
     {
@@ -83,6 +110,10 @@ export const Users: CollectionConfig = {
       name: 'googleId',
       type: 'text',
       unique: true,
+      access: {
+        create: adminOnlyField,
+        update: adminOnlyField,
+      },
       admin: {
         hidden: true,
       },

@@ -1,9 +1,9 @@
 import type { CollectionConfig } from 'payload'
 
 import { invalidateGamesCache } from '../lib/cache-tags'
-import { isAdmin } from './access'
+import { isAdmin, isAdminField } from './access'
 
-/** One row per player who joined a game. Written by POST /api/games/[id]/join (lib/join-game.ts). */
+/** One row per player who joined a game. Written by POST /api/v1/games/[id]/join (lib/join-game.ts). */
 export const GameParticipants: CollectionConfig = {
   slug: 'game-participants',
   access: {
@@ -31,6 +31,16 @@ export const GameParticipants: CollectionConfig = {
       type: 'relationship',
       relationTo: 'users',
       required: true,
+    },
+    {
+      name: 'phone',
+      type: 'text',
+      access: {
+        read: isAdminField,
+      },
+      admin: {
+        description: 'Number the player gave in the join form. Visible to admins only.',
+      },
     },
   ],
   hooks: {

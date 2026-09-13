@@ -20,6 +20,9 @@
 # production
 /build
 
+# Payload uploads (local storage; use MEDIA_BASE_URL / S3 in production)
+/media
+
 # misc
 .DS_Store
 *.pem

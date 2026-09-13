@@ -69,6 +69,8 @@ export async function POST() {
       maxPlayers: game.maxPlayers,
       availablePlayers: game.availablePlayers,
       image: game.image ?? null,
+      // Obvious placeholder; real games take the host's number from the create form.
+      contactPhone: '+994000000000',
       arena: venues[game.venue],
       host: host.id,
       homeTeam: teams[game.sport],

@@ -203,7 +203,7 @@ export interface Arena {
   name: string;
   location: string;
   /**
-   * Used by the city filter on /api/sports, /api/games and /api/games/featured.
+   * Used by the city filter on the /api/v1 sports, games and venues endpoints.
    */
   city?: 'baku' | null;
   /**
@@ -253,8 +253,12 @@ export interface Game {
   arena: number | Arena;
   level: 'beginner' | 'medium' | 'high';
   host: number | User;
-  homeTeam: number | Team;
-  awayTeam: number | Team;
+  /**
+   * Host's contact number. The API only shows it to players who joined and to the host.
+   */
+  contactPhone?: string | null;
+  homeTeam?: (number | null) | Team;
+  awayTeam?: (number | null) | Team;
   scheduledAt: string;
   maxPlayers: number;
   availablePlayers: number;
@@ -274,6 +278,10 @@ export interface GameParticipant {
   id: number;
   game: number | Game;
   user: number | User;
+  /**
+   * Number the player gave in the join form. Visible to admins only.
+   */
+  phone?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -511,6 +519,7 @@ export interface GamesSelect<T extends boolean = true> {
   arena?: T;
   level?: T;
   host?: T;
+  contactPhone?: T;
   homeTeam?: T;
   awayTeam?: T;
   scheduledAt?: T;
@@ -529,6 +538,7 @@ export interface GamesSelect<T extends boolean = true> {
 export interface GameParticipantsSelect<T extends boolean = true> {
   game?: T;
   user?: T;
+  phone?: T;
   updatedAt?: T;
   createdAt?: T;
 }

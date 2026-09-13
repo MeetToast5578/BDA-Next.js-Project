@@ -4,10 +4,13 @@ import {
   countOpenGamesBySport,
   deriveAvailability,
   formatBakuLabel,
+  formatBakuShortDate,
   initialsOf,
   normalizeCity,
   normalizeGameRecord,
+  normalizePhone,
   parseCoordinates,
+  parseCreateGameBody,
   parseGameListParams,
   rankFeatured,
   startOfBakuDay,
@@ -105,6 +108,15 @@ describe('formatBakuLabel', () => {
   })
 })
 
+describe('formatBakuShortDate', () => {
+  it('formats "Cüm, 2 Avq" style dates on the Baku calendar day', () => {
+    expect(formatBakuShortDate('2026-08-02T16:00:00Z')).toBe('Baz, 2 Avq')
+    // 21:30 UTC Thursday is 01:30 Friday in Baku.
+    expect(formatBakuShortDate('2026-09-17T21:30:00Z')).toBe('Cüm, 18 Sen')
+    expect(formatBakuShortDate(null)).toBeNull()
+  })
+})
+
 describe('startOfBakuDay', () => {
   it('returns midnight in Baku', () => {
     expect(startOfBakuDay(new Date(NOW)).toISOString()).toBe('2026-09-12T20:00:00.000Z')
@@ -123,9 +135,9 @@ describe('countOpenGamesBySport', () => {
         { sport: 'curling', status: 'open' },
       ]),
     ).toEqual([
-      { sport: 'football', iconKey: 'football', openGamesCount: 2 },
-      { sport: 'basketball', iconKey: 'basketball', openGamesCount: 0 },
-      { sport: 'tennis', iconKey: 'tennis', openGamesCount: 0 },
+      { sport: 'football', label: 'Futbol', iconKey: 'football', openGamesCount: 2 },
+      { sport: 'basketball', label: 'Basketbol', iconKey: 'basketball', openGamesCount: 0 },
+      { sport: 'tennis', label: 'Tennis', iconKey: 'tennis', openGamesCount: 0 },
     ])
   })
 })
@@ -183,6 +195,20 @@ describe('parseCoordinates', () => {
   })
 })
 
+describe('normalizePhone', () => {
+  it('accepts Azerbaijani numbers in common formats', () => {
+    expect(normalizePhone('+994 50 210 34 56')).toBe('+994502103456')
+    expect(normalizePhone('050 210 34 56')).toBe('+994502103456')
+    expect(normalizePhone('994-50-210-34-56')).toBe('+994502103456')
+  })
+
+  it('rejects anything else', () => {
+    expect(normalizePhone('12345')).toBeNull()
+    expect(normalizePhone('+7 999 123 45 67')).toBeNull()
+    expect(normalizePhone(undefined)).toBeNull()
+  })
+})
+
 describe('initialsOf', () => {
   it('takes up to two initials', () => {
     expect(initialsOf('Elvin Məmmədov')).toBe('EM')
@@ -222,6 +248,56 @@ describe('parseGameListParams', () => {
   })
 })
 
+describe('parseCreateGameBody', () => {
+  // The "Yeni Oyun Yarat" form as the design shows it: labels, strings, Baku local time.
+  const form = {
+    sport: 'Futbol',
+    level: 'Orta',
+    venueId: '3',
+    scheduledDate: '2026-09-14',
+    scheduledTime: '19:00',
+    currentCount: '2',
+    maxCount: '10',
+    hostPhone: '+994 50 210 34 56',
+  }
+  const parse = (overrides: Record<string, unknown> = {}) => parseCreateGameBody({ ...form, ...overrides }, new Date(NOW))
+
+  it('accepts the form and treats currentCount as players already in', () => {
+    expect(parse()).toEqual({
+      ok: true,
+      input: {
+        title: 'Futbol oyunu',
+        sport: 'football',
+        level: 'medium',
+        venueId: 3,
+        scheduledAt: new Date('2026-09-14T15:00:00.000Z'),
+        maxCount: 10,
+        currentCount: 2,
+        contactPhone: '+994502103456',
+      },
+    })
+  })
+
+  it('accepts stored values, a custom title and no phone', () => {
+    expect(parse({ sport: 'tennis', level: 'high', title: '  Axşam tennisi ', hostPhone: '', currentCount: undefined })).toMatchObject({
+      ok: true,
+      input: { sport: 'tennis', level: 'high', title: 'Axşam tennisi', currentCount: 0, contactPhone: null },
+    })
+  })
+
+  it('rejects invalid forms', () => {
+    expect(parse({ sport: 'curling' })).toMatchObject({ ok: false, code: 'INVALID_SPORT' })
+    expect(parse({ level: 'pro' })).toMatchObject({ ok: false, code: 'INVALID_LEVEL' })
+    expect(parse({ venueId: undefined })).toMatchObject({ ok: false, code: 'INVALID_VENUE' })
+    expect(parse({ scheduledTime: '7pm' })).toMatchObject({ ok: false, code: 'INVALID_DATE' })
+    expect(parse({ scheduledDate: '2026-09-13', scheduledTime: '13:00' })).toMatchObject({ ok: false, code: 'DATE_IN_PAST' })
+    expect(parse({ maxCount: 0 })).toMatchObject({ ok: false, code: 'INVALID_MAX_COUNT' })
+    expect(parse({ currentCount: 10 })).toMatchObject({ ok: false, code: 'INVALID_CURRENT_COUNT' })
+    expect(parse({ hostPhone: '12345' })).toMatchObject({ ok: false, code: 'INVALID_PHONE' })
+    expect(parseCreateGameBody(null, new Date(NOW))).toMatchObject({ ok: false, code: 'INVALID_SPORT' })
+  })
+})
+
 describe('normalizeGameRecord / toGameCard', () => {
   const raw = {
     id: 7,
@@ -236,23 +312,30 @@ describe('normalizeGameRecord / toGameCard', () => {
     host: { id: 1, fullName: 'Elvin Məmmədov', email: 'elvin@example.com', profilePicture: { url: '/api/media/file/elvin.png' } },
   }
 
-  it('returns the card fields with the venue as an object and server-side status', () => {
+  it('returns the card fields the design needs, with the venue as an object and server-side status', () => {
     expect(toGameCard(normalizeGameRecord(raw, NOW))).toEqual({
       id: '7',
       title: 'Axşam futbolu',
       sport: 'football',
+      sportLabel: 'Futbol',
       level: 'medium',
+      levelLabel: 'Orta səviyyə',
       venue: {
         id: '3',
         name: 'Inter Arena',
+        label: 'Inter Arena — Nərimanov, Bakı',
         district: 'Nərimanov',
         address: 'Nərimanov, Bakı',
         city: 'baku',
+        cityLabel: 'Bakı',
         coordinates: { lat: 40.4, lng: 49.87 },
         sportTypes: ['football'],
       },
       district: 'Nərimanov',
       startsAt: inHours(3),
+      dateLabel: 'Baz, 13 Sen',
+      timeLabel: '17:00',
+      relativeTimeLabel: 'Bu gün · 17:00',
       currentCount: 9,
       maxCount: 10,
       remainingSpots: 1,
@@ -263,7 +346,7 @@ describe('normalizeGameRecord / toGameCard', () => {
         fullUrl: '/images/game-football-1-7880cc.png',
         fallbackUrl: '/images/game-football-1-7880cc.png',
       },
-      host: { name: 'Elvin Məmmədov', avatarUrl: '/api/media/file/elvin.png' },
+      host: { name: 'Elvin Məmmədov', initials: 'EM', avatarUrl: '/api/media/file/elvin.png' },
     })
   })
 

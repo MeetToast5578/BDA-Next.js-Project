@@ -23,7 +23,7 @@ class JoinRejected extends Error {
  * succeed, however many app instances are running. The participant insert runs in the same
  * transaction, so a rejected join (including a duplicate) rolls the decrement back.
  */
-export async function claimSpot(payload: Payload, gameId: number, userId: number): Promise<JoinResult> {
+export async function claimSpot(payload: Payload, gameId: number, userId: number, phone: string | null = null): Promise<JoinResult> {
   const db = (payload.db as unknown as PostgresAdapter).drizzle
 
   try {
@@ -41,8 +41,8 @@ export async function claimSpot(payload: Payload, gameId: number, userId: number
       if (!game) throw new JoinRejected(await rejectionReason(tx, gameId, userId))
 
       const inserted = await tx.execute(sql`
-        INSERT INTO game_participants (game_id, user_id, updated_at, created_at)
-        VALUES (${gameId}, ${userId}, now(), now())
+        INSERT INTO game_participants (game_id, user_id, phone, updated_at, created_at)
+        VALUES (${gameId}, ${userId}, ${phone}, now(), now())
         ON CONFLICT (game_id, user_id) DO NOTHING
         RETURNING id
       `)

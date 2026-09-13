@@ -30,7 +30,7 @@ export const Arena: CollectionConfig = {
       index: true,
       options: CITY_OPTIONS,
       admin: {
-        description: 'Used by the city filter on /api/sports, /api/games and /api/games/featured.',
+        description: 'Used by the city filter on the /api/v1 sports, games and venues endpoints.',
       },
     },
     {
