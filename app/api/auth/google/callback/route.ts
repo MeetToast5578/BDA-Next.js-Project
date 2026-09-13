@@ -78,8 +78,8 @@ export const GET = async (request: Request) => {
         overrideAccess: true,
         data: {
           googleId: profile.sub,
-          'Full Name': profile.name ?? profile.email,
-        } as never,
+          fullName: profile.name ?? profile.email,
+        },
       })
     : await payload.create({
         collection: 'users',
@@ -88,8 +88,8 @@ export const GET = async (request: Request) => {
           email: profile.email,
           password: randomBytes(32).toString('hex'),
           googleId: profile.sub,
-          'Full Name': profile.name ?? profile.email,
-        } as never,
+          fullName: profile.name ?? profile.email,
+        },
       })) as { id: string | number; email: string }
 
   // The `google` auth strategy in collections/Users.ts resolves the session by

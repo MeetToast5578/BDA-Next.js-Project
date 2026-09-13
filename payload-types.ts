@@ -131,7 +131,7 @@ export interface User {
   id: number;
   phoneNumber?: string | null;
   role?: ('user' | 'admin') | null;
-  'Full Name': string;
+  fullName: string;
   profilePicture?: (number | null) | Media;
   googleId?: string | null;
   updatedAt: string;
@@ -223,8 +223,8 @@ export interface Game {
   arena: number | Arena;
   level: 'beginner' | 'medium' | 'high';
   host: number | User;
-  'Team 1': number | Team;
-  'Team 2': number | Team;
+  homeTeam: number | Team;
+  awayTeam: number | Team;
   scheduledAt: string;
   maxPlayers: number;
   availablePlayers: number;
@@ -327,7 +327,7 @@ export interface PayloadMigration {
 export interface UsersSelect<T extends boolean = true> {
   phoneNumber?: T;
   role?: T;
-  'Full Name'?: T;
+  fullName?: T;
   profilePicture?: T;
   googleId?: T;
   updatedAt?: T;
@@ -404,8 +404,8 @@ export interface GamesSelect<T extends boolean = true> {
   arena?: T;
   level?: T;
   host?: T;
-  'Team 1'?: T;
-  'Team 2'?: T;
+  homeTeam?: T;
+  awayTeam?: T;
   scheduledAt?: T;
   maxPlayers?: T;
   availablePlayers?: T;

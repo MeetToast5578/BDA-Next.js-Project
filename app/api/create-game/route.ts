@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     const body = await request.json() as Record<string, string>
     const payload = await getPayload({ config }) as unknown as PayloadClient
     const users = await payload.find({ collection: 'users', limit: 1, overrideAccess: true })
-    const host = users.docs[0] || await payload.create({ collection: 'users', overrideAccess: true, data: { email: 'seed@oyunagel.local', password: 'oyunagel-seed-password', 'Full Name': body.hostName || 'OyunaGəl istifadəçisi' } })
+    const host = users.docs[0] || await payload.create({ collection: 'users', overrideAccess: true, data: { email: 'seed@oyunagel.local', password: 'oyunagel-seed-password', fullName: body.hostName || 'OyunaGəl istifadəçisi' } })
     const arenaName = String(body.arena).split(' — ')[0]
     const arenas = await payload.find({ collection: 'arenas', where: { name: { equals: arenaName } }, limit: 1, overrideAccess: true })
     const arena = arenas.docs[0] || await payload.create({
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
         title: `${body.sport} oyunu`, sport, level, image: sportImages[sport],
         scheduledAt: `${body.scheduledDate}T${body.scheduledTime}:00.000Z`,
         maxPlayers: Number(body.maxPlayers), availablePlayers: Number(body.availablePlayers || 0),
-        arena: arena.id, host: host.id, 'Team 1': team.id, 'Team 2': team.id,
+        arena: arena.id, host: host.id, homeTeam: team.id, awayTeam: team.id,
       },
     })
 

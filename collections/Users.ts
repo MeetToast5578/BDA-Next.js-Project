@@ -70,7 +70,7 @@ export const Users: CollectionConfig = {
       },
     },
     {
-      name: 'Full Name',
+      name: 'fullName',
       type: 'text',
       required: true,
     },

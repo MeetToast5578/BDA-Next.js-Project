@@ -1,4 +1,4 @@
-import type { CollectionConfig, CollectionSlug } from 'payload'
+import type { CollectionConfig } from 'payload'
 
 export const Games: CollectionConfig = {
   slug: 'games',
@@ -38,7 +38,7 @@ export const Games: CollectionConfig = {
     {
       name: 'arena',
       type: 'relationship',
-      relationTo: 'arenas' as CollectionSlug,
+      relationTo: 'arenas',
       required: true,
     },
     {
@@ -61,15 +61,15 @@ export const Games: CollectionConfig = {
       },
     },
     {
-      name: 'Team 1',
+      name: 'homeTeam',
       type: 'relationship',
-      relationTo: 'teams' as CollectionSlug,
+      relationTo: 'teams',
       required: true,
     },
     {
-      name: 'Team 2',
+      name: 'awayTeam',
       type: 'relationship',
-      relationTo: 'teams' as CollectionSlug,
+      relationTo: 'teams',
       required: true,
     },
     {

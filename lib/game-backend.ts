@@ -93,7 +93,7 @@ export function normalizeGameRecord(raw: Record<string, unknown> | null | undefi
     scheduledAt: raw?.scheduledAt ? String(raw.scheduledAt) : null,
     coverImageUrl,
     image: coverImageUrl,
-    hostName: String(host['Full Name'] ?? host.email ?? 'OyunaGəl istifadəçisi'),
+    hostName: String(host.fullName ?? host.email ?? 'OyunaGəl istifadəçisi'),
     hostEmail: host.email ? String(host.email) : null,
     maxPlayers,
     availablePlayers,
