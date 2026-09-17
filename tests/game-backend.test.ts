@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   countOpenGamesBySport,
   deriveAvailability,
+  foldForSearch,
   formatBakuLabel,
   formatBakuShortDate,
   initialsOf,
@@ -206,6 +207,17 @@ describe('normalizePhone', () => {
     expect(normalizePhone('12345')).toBeNull()
     expect(normalizePhone('+7 999 123 45 67')).toBeNull()
     expect(normalizePhone(undefined)).toBeNull()
+  })
+})
+
+describe('foldForSearch', () => {
+  it('matches regardless of case, dotted/dotless i and Azerbaijani letters', () => {
+    expect(foldForSearch('Inter Arena')).toBe('inter arena')
+    expect(foldForSearch('İNTER')).toBe('inter')
+    expect(foldForSearch('ınter')).toBe('inter')
+    expect(foldForSearch('Nərimanov')).toBe('nerimanov')
+    expect(foldForSearch('Şüvəlan Göyçay')).toBe('suvelan goycay')
+    expect(foldForSearch('Inter Arena').includes(foldForSearch('inter'))).toBe(true)
   })
 })
 

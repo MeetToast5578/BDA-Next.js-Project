@@ -1,7 +1,9 @@
 import { randomBytes } from 'crypto'
 import { NextResponse } from 'next/server'
 
-export const GET = async () => {
+import { safeRedirectPath } from '@/lib/safe-redirect'
+
+export const GET = async (request: Request) => {
   const clientId = process.env.GOOGLE_CLIENT_ID
   const callbackUrl = process.env.GOOGLE_CALLBACK_URL
 
@@ -17,13 +19,17 @@ export const GET = async () => {
   url.searchParams.set('scope', 'openid email profile')
   url.searchParams.set('state', state)
 
-  const response = NextResponse.redirect(url)
-  response.cookies.set('google_oauth_state', state, {
+  const cookieOptions = {
     httpOnly: true,
     maxAge: 600,
     path: '/',
-    sameSite: 'lax',
+    sameSite: 'lax' as const,
     secure: process.env.NODE_ENV === 'production',
-  })
+  }
+  const response = NextResponse.redirect(url)
+  response.cookies.set('google_oauth_state', state, cookieOptions)
+  // Where to land after the callback, e.g. back on the game the user wanted to join.
+  const next = safeRedirectPath(new URL(request.url).searchParams.get('next'), '')
+  if (next) response.cookies.set('google_oauth_next', next, cookieOptions)
   return response
 }

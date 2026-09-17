@@ -155,6 +155,20 @@ export function mediaUrl(url: unknown) {
   return base && (url as string).startsWith('/') ? `${base}${url}` : (url as string)
 }
 
+/**
+ * Search key that ignores case and Azerbaijani letters: "Inter", "İnter" and "ınter" all become "inter",
+ * and "nerimanov" finds "Nərimanov". Plain toLocaleLowerCase('az') maps "I" to "ı", so "inter" would
+ * never match "Inter Arena".
+ */
+export function foldForSearch(text: string) {
+  return text
+    .toLocaleLowerCase('az')
+    .replace(/ı/g, 'i')
+    .replace(/ə/g, 'e')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+}
+
 export function initialsOf(name: string) {
   const initials = name
     .trim()

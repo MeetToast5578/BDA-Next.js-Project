@@ -1,0 +1,279 @@
+.carousel {
+  --slide-w: min(512px, calc(100vw - 72px));
+  --slide-gap: 32px;
+  --side-scale: 0.777;
+  position: relative;
+  margin-top: 40px;
+}
+
+.track {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--slide-gap);
+  margin: 0;
+  padding: 12px calc(50% - var(--slide-w) / 2);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  list-style: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.track::-webkit-scrollbar {
+  display: none;
+}
+
+.track:focus-visible {
+  outline-offset: -3px;
+}
+
+.slide {
+  flex: 0 0 var(--slide-w);
+  scroll-snap-align: center;
+  transition: transform 0.35s ease;
+}
+
+/* Neighbours shrink towards the active card, so the visual gap stays at --slide-gap. */
+.slide[data-position='before'] {
+  transform: scale(var(--side-scale));
+  transform-origin: right center;
+}
+
+.slide[data-position='after'] {
+  transform: scale(var(--side-scale));
+  transform-origin: left center;
+}
+
+/* Edge fade: masks the cards themselves, so it blends into whatever part of the hero gradient is behind. */
+.viewport {
+  --fade: min(352px, 22vw);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent);
+}
+
+/* Ticket */
+.ticket {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 24px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: var(--glass-bg);
+}
+
+.ticketTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.when {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 99px;
+  background: rgba(11, 0, 58, 0.4);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--color-accent);
+}
+
+.whenDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+.ticketBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ticketTitle {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.ticketTitle a {
+  border-radius: 4px;
+}
+
+.ticketTitle a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ticketSub {
+  font-size: 13.5px;
+  line-height: 1.3;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.attendance {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.attendanceText {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.count {
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.of {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.progress {
+  --progress-track: rgba(255, 255, 255, 0.15);
+  --progress-fill: var(--color-accent);
+}
+
+.ticketFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 36px;
+}
+
+.join {
+  width: 139px;
+  margin-left: auto;
+  padding: 12px;
+  font-size: 14px;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 13px;
+}
+
+.arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border: 0;
+  border-radius: 24px;
+  background: rgba(222, 227, 214, 0.1);
+  transition:
+    background-color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.arrow:hover:not(:disabled) {
+  background: rgba(222, 227, 214, 0.22);
+}
+
+.arrow:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.flip {
+  transform: scaleX(-1);
+}
+
+.dots {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.dot::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 6px;
+  background: rgba(222, 227, 214, 0.15);
+  transition:
+    width 0.25s ease,
+    background-color 0.25s ease;
+}
+
+.dot:hover::before {
+  background: rgba(222, 227, 214, 0.4);
+}
+
+.dot[aria-current='true']::before {
+  width: 12px;
+  background: var(--color-accent);
+}
+
+@media (max-width: 600px) {
+  .carousel {
+    --slide-gap: 12px;
+    --side-scale: 0.92;
+    margin-top: 32px;
+  }
+
+  .ticket {
+    padding: 20px;
+  }
+
+  .ticketTitle {
+    font-size: 17px;
+  }
+
+  .count {
+    font-size: 28px;
+  }
+
+  .join {
+    width: auto;
+    padding-inline: 20px;
+  }
+
+  .controls {
+    gap: 12px;
+  }
+}

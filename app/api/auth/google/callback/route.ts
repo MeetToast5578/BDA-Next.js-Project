@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 
 import config from '@payload-config'
+import { safeRedirectPath } from '@/lib/safe-redirect'
 
 type GoogleProfile = {
   sub: string
@@ -101,7 +102,12 @@ export const GET = async (request: Request) => {
     .setExpirationTime('7d')
     .sign(new TextEncoder().encode(process.env.PAYLOAD_SECRET))
 
-  const response = NextResponse.redirect(new URL('/', request.url))
+  const next = cookieHeader
+    .split(';')
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith('google_oauth_next='))
+    ?.split('=')[1]
+  const response = NextResponse.redirect(new URL(safeRedirectPath(next ? decodeURIComponent(next) : null), request.url))
   response.cookies.set('google_session', session, {
     httpOnly: true,
     maxAge: 604800,
@@ -109,12 +115,14 @@ export const GET = async (request: Request) => {
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
   })
-  response.cookies.set('google_oauth_state', '', {
-    httpOnly: true,
-    maxAge: 0,
-    path: '/',
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-  })
+  for (const name of ['google_oauth_state', 'google_oauth_next']) {
+    response.cookies.set(name, '', {
+      httpOnly: true,
+      maxAge: 0,
+      path: '/',
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    })
+  }
   return response
 }

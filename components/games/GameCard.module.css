@@ -1,0 +1,164 @@
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-primary-border-soft);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-primary-border);
+  box-shadow:
+    0 18px 32px -12px rgba(53, 37, 205, 0.18),
+    0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+
+.media {
+  position: relative;
+  height: 192px;
+  background: var(--color-track);
+}
+
+.badges {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  left: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 9.5px;
+  padding: 23px 24px 24px;
+}
+
+.title {
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 24.7px;
+  color: var(--color-title);
+  overflow-wrap: anywhere;
+}
+
+/* The title link covers the whole card; the host row and the join button sit above it. */
+.titleLink::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.titleLink:focus-visible {
+  outline: none;
+}
+
+.titleLink:focus-visible::after {
+  border-radius: var(--radius-md);
+  outline: 3px solid var(--focus-ring);
+  outline-offset: -3px;
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 16px;
+  row-gap: 4px;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-text);
+}
+
+.metaItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.strong {
+  font-weight: 500;
+}
+
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.progressLabels {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 16px;
+}
+
+.count {
+  color: var(--color-subtle);
+}
+
+.remaining {
+  color: var(--color-success-text);
+}
+
+.remainingNone {
+  color: var(--color-subtle);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.host {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  cursor: default;
+}
+
+.hostName {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  color: var(--color-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.action {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+}

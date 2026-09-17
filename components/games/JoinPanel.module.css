@@ -1,0 +1,146 @@
+.cta {
+  min-height: 56px;
+  padding: 15px 24px 16px;
+  gap: 16px;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 24.7px;
+}
+
+.state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 14px 20px;
+  border-radius: var(--radius-sm);
+  background: var(--color-chip);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-align: center;
+}
+
+.joined {
+  background: #ecfdf3;
+  color: var(--color-success-text);
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-success-text);
+  color: #fff;
+  font-size: 13px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* "Bir addım qaldı" */
+.divider {
+  height: 1px;
+  border: 0;
+  margin: 0;
+  background: var(--color-primary-border-soft);
+}
+
+.success {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.hostGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.groupLabel {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.hostBadge {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--color-primary-border-soft);
+  border-radius: var(--radius-md);
+  background: var(--color-primary-tint);
+}
+
+.hostText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.hostName {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.active {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-success-text);
+}
+
+.activeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-success);
+}
+
+.phone {
+  flex-basis: 100%;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--color-primary);
+  text-align: center;
+}
+
+.phone:hover {
+  background: #eef0ff;
+}
+
+.note {
+  padding-left: 12px;
+  border-left: 3px solid var(--color-accent);
+  font-size: 14px;
+  line-height: 19px;
+  color: var(--color-muted-alt);
+}

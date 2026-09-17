@@ -1,18 +1,44 @@
+import type { Metadata } from 'next'
+import { Inter, Space_Grotesk } from 'next/font/google'
 import React from 'react'
-import './styles.css'
 
-export const metadata = {
-  description: 'A blank template using Payload in a Next.js app.',
-  title: 'Payload Blank Template',
+import { Footer } from '@/components/site/Footer'
+import { Header } from '@/components/site/Header'
+import './globals.css'
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin', 'latin-ext'],
+  variable: '--font-space-grotesk',
+  display: 'swap',
+})
+
+const inter = Inter({
+  subsets: ['latin', 'latin-ext'],
+  variable: '--font-inter',
+  display: 'swap',
+})
+
+export const metadata: Metadata = {
+  title: {
+    default: 'OyunaGəl — Bakıda açıq oyunlar',
+    template: '%s · OyunaGəl',
+  },
+  description:
+    'Sevdiyin idmanı seç, meydança tap, oyuna qoşul. Bakı daxilində futbol, tennis və basketbol üzrə açıq oyunlar.',
 }
 
-export default async function RootLayout(props: { children: React.ReactNode }) {
-  const { children } = props
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="az" data-scroll-behavior="smooth" className={`${spaceGrotesk.variable} ${inter.variable}`}>
       <body>
-        <main>{children}</main>
+        <a href="#main" className="skip-link">
+          Məzmuna keç
+        </a>
+        <Header />
+        <main id="main" tabIndex={-1}>
+          {children}
+        </main>
+        <Footer />
       </body>
     </html>
   )

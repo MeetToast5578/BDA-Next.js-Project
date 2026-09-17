@@ -217,7 +217,7 @@ Options for the "Meydança" picker.
 | ------- | ------- | ------------------------------------------------------- |
 | `city`  | `baku`  | As above                                                |
 | `sport` | all     | Venues offering that sport (venues with no sports set are always included) |
-| `q`     | none    | Case-insensitive search in name, district and address  |
+| `q`     | none    | Search in name, district and address; ignores case and Azerbaijani letters (`inter`, `nerimanov`) |
 
 ```json
 [{ "id": "3", "name": "Aku Arena", "label": "Aku Arena — Nizami, Bakı", "district": "Nizami", "…": "as venue above" }]

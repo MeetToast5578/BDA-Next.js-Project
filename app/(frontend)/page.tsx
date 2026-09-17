@@ -1,59 +1,37 @@
-import { headers as getHeaders } from 'next/headers.js'
-import Image from 'next/image'
-import { getPayload } from 'payload'
-import React from 'react'
-import { fileURLToPath } from 'url'
+import { GamesSection } from '@/components/games/GamesSection'
+import { Hero } from '@/components/home/Hero'
+import { DEFAULT_CITY, FEATURED_LIMIT } from '@/lib/game-backend'
+import { getFeaturedGames } from '@/lib/game-queries'
+import { loadGameList, sportFromSearchParams } from '@/lib/page-data'
 
-import config from '@/payload.config'
-import './styles.css'
+const GAMES_ANCHOR = 'oyunlar'
+/** Two rows of three cards before "Daha çox". */
+const HOME_PAGE_SIZE = 6
 
-export default async function HomePage() {
-  const headers = await getHeaders()
-  const payloadConfig = await config
-  const payload = await getPayload({ config: payloadConfig })
-  const { user } = await payload.auth({ headers })
-
-  const fileURL = `vscode://file/${fileURLToPath(import.meta.url)}`
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const sport = sportFromSearchParams(await searchParams)
+  const [featured, { list, sports }] = await Promise.all([
+    getFeaturedGames(DEFAULT_CITY, FEATURED_LIMIT),
+    loadGameList({ sport, limit: HOME_PAGE_SIZE }),
+  ])
 
   return (
-    <div className="home">
-      <div className="content">
-        <picture>
-          <source srcSet="https://raw.githubusercontent.com/payloadcms/payload/3.x/packages/ui/src/assets/payload-favicon.svg" />
-          <Image
-            alt="Payload Logo"
-            height={65}
-            src="https://raw.githubusercontent.com/payloadcms/payload/3.x/packages/ui/src/assets/payload-favicon.svg"
-            width={65}
-          />
-        </picture>
-        {!user && <h1>Welcome to your new project.</h1>}
-        {user && <h1>Welcome back, {user.email}</h1>}
-        <div className="links">
-          <a
-            className="admin"
-            href={payloadConfig.routes.admin}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            Go to admin panel
-          </a>
-          <a
-            className="docs"
-            href="https://payloadcms.com/docs"
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            Documentation
-          </a>
-        </div>
-      </div>
-      <div className="footer">
-        <p>Update this page by editing</p>
-        <a className="codeLink" href={fileURL}>
-          <code>app/(frontend)/page.tsx</code>
-        </a>
-      </div>
-    </div>
+    <>
+      <Hero featured={featured} gamesAnchor={GAMES_ANCHOR} />
+      <GamesSection
+        id={GAMES_ANCHOR}
+        eyebrow="Açıq oyunlar"
+        title="Bu gün və sabah üçün qoşula biləcəyin oyunlar"
+        sports={sports}
+        sport={sport}
+        basePath="/"
+        list={list}
+        seeAllHref={sport ? `/games?sport=${sport}` : '/games'}
+      />
+    </>
   )
 }

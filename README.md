@@ -29,7 +29,8 @@ A [Next.js](https://nextjs.org) app with [Payload CMS](https://payloadcms.com) a
 
 | Path                | What it holds                                                   |
 | ------------------- | --------------------------------------------------------------- |
-| `app/(frontend)`    | Public site routes                                                |
+| `app/(frontend)`    | Public site: home, `/games`, `/games/[id]`, `/games/new`, `/login`, `/register` |
+| `components/`       | Frontend components (CSS Modules); design tokens are in `app/(frontend)/globals.css` |
 | `app/(payload)`     | Payload admin panel and its REST/GraphQL routes (generated)       |
 | `app/api`           | Custom API routes — games, sports, Google auth, seeding           |
 | `collections/`      | Payload collection definitions                                    |

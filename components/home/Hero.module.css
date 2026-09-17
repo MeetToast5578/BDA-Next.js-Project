@@ -1,0 +1,109 @@
+.hero {
+  --focus-ring: var(--focus-ring-on-dark);
+  position: relative;
+  overflow: hidden;
+  padding: 64px 0 28px;
+  background: var(--hero-gradient);
+  color: #fff;
+}
+
+/* 12-column / 100px grid of 1px white lines at 6% opacity. */
+.grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.06;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, #fff 1px, transparent 1px),
+    linear-gradient(to bottom, #fff 1px, transparent 1px);
+  background-size:
+    calc(100% / 12) 100%,
+    100% 100px;
+  background-position: -1px 0, 0 -32px;
+}
+
+.content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  max-width: calc(691px + 2 * var(--gutter));
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+  text-align: center;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border: 1px solid rgba(222, 227, 214, 0.2);
+  border-radius: var(--radius-pill);
+  background: rgba(11, 0, 58, 0.25);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--hero-text-soft);
+}
+
+.eyebrowDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 46px;
+  font-weight: 700;
+  line-height: 48.76px;
+  letter-spacing: -0.01em;
+}
+
+.highlight {
+  color: var(--color-accent);
+  font-style: normal;
+}
+
+.lead {
+  max-width: 520px;
+  font-size: 17px;
+  line-height: 26.35px;
+  color: var(--hero-text-soft);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 24px;
+}
+
+@media (max-width: 600px) {
+  .hero {
+    padding-top: 40px;
+  }
+
+  .content {
+    gap: 18px;
+  }
+
+  .title {
+    font-size: 32px;
+    line-height: 1.15;
+  }
+
+  .lead {
+    font-size: 15.5px;
+    line-height: 1.6;
+  }
+
+  .actions {
+    flex-direction: column;
+    align-self: stretch;
+    gap: 12px;
+  }
+}

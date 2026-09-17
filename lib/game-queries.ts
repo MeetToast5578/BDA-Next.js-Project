@@ -7,6 +7,7 @@ import {
   FEATURED_WINDOW_HOURS,
   countOpenGamesBySport,
   deriveAvailability,
+  foldForSearch,
   initialsOf,
   mediaUrl,
   normalizeGameRecord,
@@ -294,9 +295,9 @@ const findVenues = unstable_cache(
 
 /** Venue picker options. Venues without sport types listed are offered for every sport. */
 export async function listVenues(city: string, sport: string | null, search: string | null) {
-  const needle = search?.trim().toLocaleLowerCase('az')
+  const needle = search?.trim() ? foldForSearch(search.trim()) : null
   return (await findVenues(city))
     .map((doc) => normalizeVenue(doc))
     .filter((venue) => !sport || venue.sportTypes.length === 0 || venue.sportTypes.includes(sport))
-    .filter((venue) => !needle || [venue.name, venue.district, venue.address].some((text) => text?.toLocaleLowerCase('az').includes(needle)))
+    .filter((venue) => !needle || [venue.name, venue.district, venue.address].some((text) => text && foldForSearch(text).includes(needle)))
 }

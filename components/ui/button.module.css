@@ -1,0 +1,145 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.button:disabled,
+.button[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* Sizes */
+.sm {
+  padding: 8px 24px;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 700;
+}
+
+.md {
+  padding: 10px 24px;
+  font-size: 14.5px;
+}
+
+.lg {
+  padding: 14px 28px;
+  font-size: 15px;
+}
+
+.xl {
+  min-height: 52px;
+  padding: 14px 24px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.block {
+  display: flex;
+  width: 100%;
+}
+
+/* Variants */
+.primary {
+  background: var(--color-primary);
+  color: #fff;
+  box-shadow: var(--shadow-button);
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.dark {
+  background: var(--color-ink);
+  color: #fff;
+  font-weight: 500;
+}
+
+.dark:hover:not(:disabled) {
+  background: var(--color-ink-hover);
+}
+
+.outlineDark {
+  border-color: var(--color-ink);
+  color: var(--color-ink);
+  background: transparent;
+}
+
+.outlineDark:hover:not(:disabled) {
+  background: rgba(20, 27, 43, 0.06);
+}
+
+.outlinePrimary {
+  border: 1.5px solid var(--color-primary);
+  color: var(--color-ink);
+  background: transparent;
+}
+
+.outlinePrimary:hover:not(:disabled) {
+  background: var(--color-primary-tint);
+}
+
+.accent {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.accent:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+}
+
+.outlineLight {
+  border-color: rgba(255, 255, 255, 0.8);
+  color: #fff;
+  background: transparent;
+}
+
+.outlineLight:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #fff;
+}
+
+.white {
+  background: #fff;
+  color: #12291f;
+}
+
+.white:hover:not(:disabled) {
+  background: #eef0ff;
+}
+
+.ghost {
+  background: transparent;
+  color: var(--color-ink);
+}
+
+.ghost:hover:not(:disabled) {
+  background: rgba(20, 27, 43, 0.06);
+}
+
+.muted {
+  background: var(--color-chip);
+  color: var(--color-muted);
+  box-shadow: none;
+}

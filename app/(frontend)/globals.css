@@ -1,0 +1,234 @@
+/*
+ * OyunaGəl design tokens, taken from the Figma file (MVP, node 54:236 and the detail/create/auth screens).
+ * A few text colors are darker than in Figma so they pass WCAG AA; those are marked "AA".
+ */
+:root {
+  /* Brand */
+  --color-primary: #3525cd;
+  --color-primary-hover: #2a1cb3;
+  --color-primary-deep: #1b1367;
+  --color-primary-tint: rgba(53, 37, 205, 0.05);
+  --color-primary-border: rgba(53, 37, 205, 0.2);
+  --color-primary-border-soft: rgba(53, 37, 205, 0.15);
+  --color-accent: #e8a33d;
+  --color-accent-hover: #f0b458;
+  --color-on-accent: #5c3a0e;
+  --color-success: #00d26a;
+  --color-success-text: #047a3f; /* AA: #00d26a on white is 2.0:1 */
+  --color-danger: #b42318;
+  --color-danger-tint: #fef3f2;
+
+  /* Ink */
+  --color-ink: #141b2b;
+  --color-ink-hover: #26304a;
+  --color-heading: #141a16;
+  --color-title: #11111a;
+  --color-text: #464555;
+  --color-muted: #5c665f;
+  --color-muted-alt: #5e5c66;
+  --color-subtle: #706e80; /* AA: Figma #777587 is 4.49:1 */
+  --color-placeholder: #666e69; /* AA: Figma #a5ada8 is 2.1:1 */
+  --color-badge-text: #323232;
+
+  /* Surfaces */
+  --color-page: #fafafa;
+  --color-surface: #ffffff;
+  --color-border: #dee3d6;
+  --color-track: #e9edff;
+  --color-track-warm: #efeee7;
+  --color-chip: #f3f5ee;
+  --color-footer: #141a16;
+  --color-footer-border: rgba(222, 227, 214, 0.3);
+  --color-footer-text: rgba(255, 255, 255, 0.65); /* AA: Figma 0.35 is 3.2:1 */
+  --color-footer-logo: rgba(255, 255, 255, 0.7);
+
+  /* Levels */
+  --level-beginner-bg: rgba(102, 210, 0, 0.7);
+  --level-beginner-border: #6db926;
+  --level-medium-bg: rgba(228, 160, 16, 0.7);
+  --level-medium-border: #c69731;
+  --level-high-bg: rgba(38, 92, 255, 0.7);
+  --level-high-border: #4167d9;
+
+  /* Hero */
+  --hero-gradient: linear-gradient(104.13deg, #3525cd 46.78%, #1b1367 109.51%);
+  --hero-text-soft: #dee3d6;
+  --glass-bg: rgba(255, 255, 255, 0.16);
+  --glass-border: rgba(222, 227, 214, 0.1);
+
+  /* Typography */
+  --font-display: var(--font-space-grotesk), 'Space Grotesk', system-ui, sans-serif;
+  --font-body: var(--font-inter), 'Inter', system-ui, sans-serif;
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 14px;
+  --radius-xl: 24px;
+  --radius-pill: 9999px;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-11: 44px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-24: 96px;
+
+  /* Layout */
+  --container: 1056px;
+  --container-wide: 1216px;
+  --gutter: 24px;
+  --header-height: 65px;
+
+  /* Effects */
+  --shadow-card: 0 12px 28px -10px rgba(131, 84, 0, 0.1), 0 4px 12px 0 rgba(0, 0, 0, 0.02);
+  --shadow-button: 0 4px 6px -1px rgba(53, 37, 205, 0.2), 0 2px 4px -2px rgba(53, 37, 205, 0.2);
+  --shadow-modal: 0 16px 20px rgba(18, 41, 31, 0.12);
+  --focus-ring: #3525cd;
+  --focus-ring-on-dark: #ffd48a;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-page);
+  color: var(--color-heading);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+main {
+  flex: 1 0 auto;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+img {
+  max-width: 100%;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+[id] {
+  scroll-margin-top: calc(var(--header-height) + 16px);
+}
+
+main:focus {
+  outline: none;
+}
+
+/* No page scrolling behind an open modal. */
+html:has(dialog[open]) {
+  overflow: hidden;
+}
+
+.skip-link {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 100;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--color-ink);
+  color: #fff;
+  font-weight: 600;
+  transform: translateY(-150%);
+  transition: transform 0.15s ease;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.container {
+  width: 100%;
+  max-width: calc(var(--container) + 2 * var(--gutter));
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.container-wide {
+  width: 100%;
+  max-width: calc(var(--container-wide) + 2 * var(--gutter));
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+@media (max-width: 480px) {
+  :root {
+    --gutter: 16px;
+  }
+}
