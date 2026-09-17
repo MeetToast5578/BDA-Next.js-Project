@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useState } from 'react'
 
 import { apiFetch, withQuery } from '@/lib/api-client'
@@ -99,6 +100,7 @@ export function EmptyState({
   const Heading = headingLevel
   return (
     <div className={styles.empty}>
+      <Image src="/images/empty-sports.png" alt="" width={320} height={320} className={styles.emptyImage} />
       <Heading className={styles.emptyTitle}>{title}</Heading>
       <p className={styles.emptyText}>{text}</p>
       {action}

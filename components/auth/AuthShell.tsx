@@ -36,7 +36,8 @@ export function AuthShell({
   description: string
   /** Omitted when Google sign-in isn't configured. */
   googleHref?: string
-  children: React.ReactNode
+  /** Omitted for Google-only pages (no divider or form card is rendered). */
+  children?: React.ReactNode
 }) {
   return (
     <section className={styles.shell} aria-labelledby="auth-title">
@@ -58,11 +59,11 @@ export function AuthShell({
               <GoogleIcon />
               Google ilə davam et
             </a>
-            <p className={styles.divider}>və ya</p>
+            {children && <p className={styles.divider}>və ya</p>}
           </>
         )}
 
-        <div className={styles.card}>{children}</div>
+        {children && <div className={styles.card}>{children}</div>}
       </div>
     </section>
   )

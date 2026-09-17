@@ -77,6 +77,13 @@
   text-align: center;
 }
 
+.emptyImage {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  margin-bottom: 16px;
+}
+
 .emptyTitle {
   font-family: var(--font-display);
   font-size: 22px;
