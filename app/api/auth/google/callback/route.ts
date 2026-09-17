@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 
 import config from '@payload-config'
-import { googleCallbackUrl } from '@/lib/google-oauth'
+import { googleCallbackUrl, requestOrigin } from '@/lib/google-oauth'
 import { safeRedirectPath } from '@/lib/safe-redirect'
 
 type GoogleProfile = {
@@ -108,7 +108,9 @@ export const GET = async (request: Request) => {
     .map((cookie) => cookie.trim())
     .find((cookie) => cookie.startsWith('google_oauth_next='))
     ?.split('=')[1]
-  const response = NextResponse.redirect(new URL(safeRedirectPath(next ? decodeURIComponent(next) : null), request.url))
+  const response = NextResponse.redirect(
+    new URL(safeRedirectPath(next ? decodeURIComponent(next) : null), requestOrigin(request)),
+  )
   response.cookies.set('google_session', session, {
     httpOnly: true,
     maxAge: 604800,
