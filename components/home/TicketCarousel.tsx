@@ -9,6 +9,16 @@ import { buttonClass } from '@/components/ui/button'
 import { Icon } from '@/components/ui/Icon'
 import styles from './TicketCarousel.module.css'
 
+/**
+ * The games are rendered three times over, so the track always holds a full copy of buffer on either
+ * side of the real one. Scrolling off an edge therefore lands on identical content, which lets us
+ * shift the scroll position back by a whole copy once scrolling settles. That shift is invisible —
+ * the same cards sit in the same places — and it is what makes the loop seamless in both directions.
+ */
+const COPIES = 3
+/** Scrolling counts as finished this long after the last scroll event. */
+const SETTLE_MS = 150
+
 function slidesOf(track: HTMLElement | null) {
   return Array.from(track?.children ?? []) as HTMLElement[]
 }
@@ -17,11 +27,27 @@ function prefersReducedMotion() {
   return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
+/** Scroll position that puts `slide` in the middle of the viewport. */
+function centerOf(track: HTMLElement, slide: HTMLElement) {
+  return slide.offsetLeft - (track.clientWidth - slide.offsetWidth) / 2
+}
+
 /** Hero "ticket" carousel: native scroll-snap (so touch swipe just works) with synced arrows and dots. */
 export function TicketCarousel({ games }: { games: FeaturedGame[] }) {
   const trackRef = useRef<HTMLUListElement>(null)
   const frame = useRef(0)
+  const settle = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const dragging = useRef(false)
+
+  // A single game has nothing to loop through, so it skips the clones and stays a plain one-card track.
+  const loops = games.length > 1
+  /** Index of the first slide of the middle copy — the real, non-cloned one. */
+  const offset = loops ? games.length : 0
+  // Before hydration the track is still at scrollLeft 0, which centres slide 0. Starting `active`
+  // anywhere else would paint the centred card at the shrunken neighbour scale until the effect below
+  // recentres it. Slide 0 shows the same game as slide `offset`, so that first jump is invisible.
   const [active, setActive] = useState(0)
+  const activeRef = useRef(0)
 
   const syncActive = useCallback(() => {
     const track = trackRef.current
@@ -36,36 +62,97 @@ export function TicketCarousel({ games }: { games: FeaturedGame[] }) {
         nearestDistance = distance
       }
     })
+    activeRef.current = nearest
     setActive(nearest)
   }, [])
+
+  /**
+   * Shifts the scroll position by whole copies until it sits in the middle one again. Only ever runs
+   * once scrolling has stopped: moving `scrollLeft` mid-animation would cancel a smooth scroll.
+   */
+  const recenter = useCallback(() => {
+    const track = trackRef.current
+    const items = slidesOf(track)
+    const first = items[offset]
+    if (!track || !loops || !first || !items[0]) return
+
+    const copyWidth = first.offsetLeft - items[0].offsetLeft
+    if (copyWidth <= 0) return
+
+    const base = centerOf(track, first)
+    const drift = track.scrollLeft - base
+    // Modulo rather than a single step, so even a long flick past the buffer lands back in the middle.
+    const wrapped = ((drift % copyWidth) + copyWidth) % copyWidth
+    if (Math.abs(wrapped - drift) < 1) return
+
+    track.scrollLeft = base + wrapped
+    syncActive()
+  }, [loops, offset, syncActive])
+
+  // Start on the middle copy, so there is somewhere to go in both directions from the very first swipe.
+  useEffect(() => {
+    const track = trackRef.current
+    const slide = slidesOf(track)[offset]
+    if (!track || !slide) return
+    track.scrollLeft = centerOf(track, slide)
+    syncActive()
+  }, [offset, syncActive])
 
   useEffect(() => {
     const track = trackRef.current
     if (!track) return
+
+    const scheduleSettle = () => {
+      clearTimeout(settle.current)
+      // A finger still on the screen owns the scroll position; recentring waits until it lifts.
+      settle.current = setTimeout(() => !dragging.current && recenter(), SETTLE_MS)
+    }
     const onScroll = () => {
       cancelAnimationFrame(frame.current)
       frame.current = requestAnimationFrame(syncActive)
+      scheduleSettle()
     }
+    const onPointerDown = () => {
+      dragging.current = true
+    }
+    const onPointerUp = () => {
+      dragging.current = false
+      scheduleSettle()
+    }
+    const onResize = () => {
+      // --slide-w is viewport-relative: keep the active card centred instead of letting it drift.
+      const slide = slidesOf(track)[activeRef.current]
+      if (slide) track.scrollLeft = centerOf(track, slide)
+      syncActive()
+    }
+
     track.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', onScroll)
+    track.addEventListener('pointerdown', onPointerDown, { passive: true })
+    window.addEventListener('pointerup', onPointerUp, { passive: true })
+    window.addEventListener('pointercancel', onPointerUp, { passive: true })
+    window.addEventListener('resize', onResize)
     return () => {
       cancelAnimationFrame(frame.current)
+      clearTimeout(settle.current)
       track.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', onScroll)
+      track.removeEventListener('pointerdown', onPointerDown)
+      window.removeEventListener('pointerup', onPointerUp)
+      window.removeEventListener('pointercancel', onPointerUp)
+      window.removeEventListener('resize', onResize)
     }
-  }, [syncActive])
+  }, [recenter, syncActive])
 
   function goTo(index: number) {
     const track = trackRef.current
     const slide = slidesOf(track)[index]
     if (!track || !slide) return
-    track.scrollTo({
-      left: slide.offsetLeft - (track.clientWidth - slide.offsetWidth) / 2,
-      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-    })
+    track.scrollTo({ left: centerOf(track, slide), behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
   }
 
-  const last = games.length - 1
+  /** Which game is showing, regardless of the copy it came from. */
+  const current = loops ? active % games.length : active
+  /** Steps to a game within the copy already on screen, so a dot never scrolls the whole track. */
+  const goToGame = (gameIndex: number) => goTo(active - current + gameIndex)
 
   return (
     <div className={styles.carousel} role="region" aria-roledescription="karusel" aria-labelledby="featured-title">
@@ -74,29 +161,29 @@ export function TicketCarousel({ games }: { games: FeaturedGame[] }) {
       </h2>
       <div className={styles.viewport}>
         <ul ref={trackRef} className={styles.track} tabIndex={0} aria-label="Oyunlar, sürüşdürün">
-          {games.map((game, index) => (
-            <li
-              key={game.id}
-              className={styles.slide}
-              data-position={index < active ? 'before' : index > active ? 'after' : 'active'}
-              aria-roledescription="slayd"
-              aria-label={`${index + 1} / ${games.length}`}
-            >
-              <Ticket game={game} />
-            </li>
-          ))}
+          {Array.from({ length: games.length * (loops ? COPIES : 1) }, (_, index) => {
+            // The buffer copies are decoration: hidden from screen readers and skipped by Tab.
+            const clone = index < offset || index >= offset + games.length
+            return (
+              <li
+                key={index}
+                className={styles.slide}
+                data-position={index < active ? 'before' : index > active ? 'after' : 'active'}
+                aria-roledescription={clone ? undefined : 'slayd'}
+                aria-label={clone ? undefined : `${(index % games.length) + 1} / ${games.length}`}
+                aria-hidden={clone || undefined}
+                inert={clone || undefined}
+              >
+                <Ticket game={games[index % games.length]} />
+              </li>
+            )
+          })}
         </ul>
       </div>
 
-      {games.length > 1 && (
+      {loops && (
         <div className={styles.controls}>
-          <button
-            type="button"
-            className={styles.arrow}
-            onClick={() => goTo(active - 1)}
-            disabled={active === 0}
-            aria-label="Əvvəlki oyun"
-          >
+          <button type="button" className={styles.arrow} onClick={() => goTo(active - 1)} aria-label="Əvvəlki oyun">
             <Icon name="chevron" className={styles.flip} />
           </button>
           <ul className={styles.dots}>
@@ -105,20 +192,14 @@ export function TicketCarousel({ games }: { games: FeaturedGame[] }) {
                 <button
                   type="button"
                   className={styles.dot}
-                  onClick={() => goTo(index)}
+                  onClick={() => goToGame(index)}
                   aria-label={`${index + 1}. oyuna keç`}
-                  aria-current={index === active ? 'true' : undefined}
+                  aria-current={index === current ? 'true' : undefined}
                 />
               </li>
             ))}
           </ul>
-          <button
-            type="button"
-            className={styles.arrow}
-            onClick={() => goTo(active + 1)}
-            disabled={active === last}
-            aria-label="Növbəti oyun"
-          >
+          <button type="button" className={styles.arrow} onClick={() => goTo(active + 1)} aria-label="Növbəti oyun">
             <Icon name="chevron" />
           </button>
         </div>

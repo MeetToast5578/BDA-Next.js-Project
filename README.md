@@ -11,7 +11,14 @@ A [Next.js](https://nextjs.org) app with [Payload CMS](https://payloadcms.com) a
    DATABASE_URL=<postgres connection string>
    # Optional: CDN origin that serves /api/media/*, used in API image URLs
    MEDIA_BASE_URL=https://cdn.example.com
+   # Optional: "Continue with Google" (the button is hidden without these)
+   GOOGLE_CLIENT_ID=<OAuth client id>
+   GOOGLE_CLIENT_SECRET=<OAuth client secret>
    ```
+
+   Google sends users back to `/api/auth/google/callback` on the site they signed in from, so every
+   origin you use must be listed under **Authorized redirect URIs** in the Google Cloud OAuth client, e.g.
+   `http://localhost:3000/api/auth/google/callback` and `https://bda-next-six.vercel.app/api/auth/google/callback`.
 
 2. Install and run:
 
@@ -22,7 +29,7 @@ A [Next.js](https://nextjs.org) app with [Payload CMS](https://payloadcms.com) a
 
 - App: [http://localhost:3000](http://localhost:3000)
 - Payload admin: [http://localhost:3000/admin](http://localhost:3000/admin)
-- Seed sample venues and games (dev only): `curl -X POST http://localhost:3000/api/seed-games` while the dev server runs
+- Fill the database with sample venues, players and games: `npm run seed`
 - API reference: [docs/api.md](docs/api.md)
 
 ## Structure
@@ -32,12 +39,10 @@ A [Next.js](https://nextjs.org) app with [Payload CMS](https://payloadcms.com) a
 | `app/(frontend)`    | Public site: home, `/games`, `/games/[id]`, `/games/new`, `/login`, `/register` |
 | `components/`       | Frontend components (CSS Modules); design tokens are in `app/(frontend)/globals.css` |
 | `app/(payload)`     | Payload admin panel and its REST/GraphQL routes (generated)       |
-| `app/api`           | Custom API routes — games, sports, Google auth, seeding           |
+| `app/api`           | Custom API routes — games, sports, Google auth                    |
 | `collections/`      | Payload collection definitions                                    |
 | `lib/`              | Shared server helpers                                             |
-| `src/prisma/`       | Prisma 8 contract and client                                      |
-| `migrations/`       | Prisma migration history                                          |
-| `scripts/`          | One-off dev scripts                                               |
+| `scripts/`          | One-off dev scripts (`seed.ts`)                                   |
 | `payload.config.ts` | Payload configuration                                             |
 
 ## Scripts
@@ -49,4 +54,4 @@ A [Next.js](https://nextjs.org) app with [Payload CMS](https://payloadcms.com) a
 | `npm start`             | Serve the production build                    |
 | `npm run lint`          | Run ESLint                                    |
 | `npm test`              | Run the Vitest suite (join tests use `DATABASE_URL`) |
-| `npm run contract:emit` | Regenerate the Prisma contract                |
+| `npm run seed`          | Reset and fill the database with sample data  |

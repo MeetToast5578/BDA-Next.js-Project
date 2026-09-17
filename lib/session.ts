@@ -28,5 +28,5 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
 })
 
 export function isGoogleAuthConfigured() {
-  return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CALLBACK_URL)
+  return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
 }

@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 
 import config from '@payload-config'
+import { googleCallbackUrl } from '@/lib/google-oauth'
 import { safeRedirectPath } from '@/lib/safe-redirect'
 
 type GoogleProfile = {
@@ -40,7 +41,7 @@ export const GET = async (request: Request) => {
       client_secret: process.env.GOOGLE_CLIENT_SECRET ?? '',
       code,
       grant_type: 'authorization_code',
-      redirect_uri: process.env.GOOGLE_CALLBACK_URL ?? '',
+      redirect_uri: googleCallbackUrl(request),
     }),
   })
 

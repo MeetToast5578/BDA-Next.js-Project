@@ -193,18 +193,11 @@
   border: 0;
   border-radius: 24px;
   background: rgba(222, 227, 214, 0.1);
-  transition:
-    background-color 0.15s ease,
-    opacity 0.15s ease;
+  transition: background-color 0.15s ease;
 }
 
-.arrow:hover:not(:disabled) {
+.arrow:hover {
   background: rgba(222, 227, 214, 0.22);
-}
-
-.arrow:disabled {
-  cursor: not-allowed;
-  opacity: 0.35;
 }
 
 .flip {

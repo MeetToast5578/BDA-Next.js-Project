@@ -1,20 +1,20 @@
 import { randomBytes } from 'crypto'
 import { NextResponse } from 'next/server'
 
+import { googleCallbackUrl } from '@/lib/google-oauth'
 import { safeRedirectPath } from '@/lib/safe-redirect'
 
 export const GET = async (request: Request) => {
   const clientId = process.env.GOOGLE_CLIENT_ID
-  const callbackUrl = process.env.GOOGLE_CALLBACK_URL
 
-  if (!clientId || !callbackUrl) {
+  if (!clientId) {
     return Response.json({ error: 'Google OAuth is not configured' }, { status: 500 })
   }
 
   const state = randomBytes(32).toString('hex')
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth')
   url.searchParams.set('client_id', clientId)
-  url.searchParams.set('redirect_uri', callbackUrl)
+  url.searchParams.set('redirect_uri', googleCallbackUrl(request))
   url.searchParams.set('response_type', 'code')
   url.searchParams.set('scope', 'openid email profile')
   url.searchParams.set('state', state)
