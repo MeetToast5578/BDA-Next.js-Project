@@ -126,7 +126,7 @@
 }
 
 .white:hover:not(:disabled) {
-  background: #eef0ff;
+  background: var(--color-primary-soft);
 }
 
 .ghost {

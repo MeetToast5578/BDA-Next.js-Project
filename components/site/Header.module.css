@@ -99,19 +99,6 @@
   white-space: nowrap;
 }
 
-.avatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-}
-
 @media (max-width: 1023px) {
   .nav {
     padding-inline: var(--gutter);

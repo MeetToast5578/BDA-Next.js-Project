@@ -10,6 +10,7 @@ import { safeRedirectPath } from '@/lib/safe-redirect'
 type GoogleProfile = {
   sub: string
   email: string
+  email_verified?: boolean
   name?: string
   picture?: string
 }
@@ -59,8 +60,9 @@ export const GET = async (request: Request) => {
   })
   const profile = (await profileResponse.json()) as GoogleProfile
 
-  if (!profileResponse.ok || !profile.sub || !profile.email) {
-    return NextResponse.json({ error: 'Could not read Google profile' }, { status: 401 })
+  // An unverified email must not sign in to (and take over) an existing account with that address.
+  if (!profileResponse.ok || !profile.sub || !profile.email || profile.email_verified !== true) {
+    return NextResponse.json({ error: 'Could not read a verified Google profile' }, { status: 401 })
   }
 
   const payload = await getPayload({ config })
@@ -81,6 +83,7 @@ export const GET = async (request: Request) => {
         data: {
           googleId: profile.sub,
           fullName: profile.name ?? profile.email,
+          avatarUrl: profile.picture ?? null,
         },
       })
     : await payload.create({
@@ -91,6 +94,7 @@ export const GET = async (request: Request) => {
           password: randomBytes(32).toString('hex'),
           googleId: profile.sub,
           fullName: profile.name ?? profile.email,
+          avatarUrl: profile.picture ?? null,
         },
       })) as { id: string | number; email: string }
 

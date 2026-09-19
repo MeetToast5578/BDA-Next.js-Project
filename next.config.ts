@@ -7,7 +7,11 @@ const nextConfig: NextConfig = {
   images: {
     // AVIF where the browser accepts it, WebP otherwise.
     formats: ["image/avif", "image/webp"],
-    remotePatterns: mediaBaseUrl ? [new URL(`${mediaBaseUrl}/**`)] : [],
+    remotePatterns: [
+      // Google profile pictures saved at Google sign-in (users.avatarUrl).
+      new URL("https://lh3.googleusercontent.com/**"),
+      ...(mediaBaseUrl ? [new URL(`${mediaBaseUrl}/**`)] : []),
+    ],
   },
 };
 

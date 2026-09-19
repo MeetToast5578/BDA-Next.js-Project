@@ -194,7 +194,7 @@
 }
 
 .phone:hover {
-  background: rgba(53, 37, 205, 0.1);
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
 }
 
 @media (max-width: 859px) {

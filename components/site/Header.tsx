@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
 import { getCurrentUser } from '@/lib/session'
+import { Avatar } from '@/components/games/bits'
 import { buttonClass } from '@/components/ui/button'
 import styles from './Header.module.css'
 import { LogoutButton } from './LogoutButton'
@@ -35,9 +36,12 @@ export async function Header() {
           {user ? (
             <>
               <span className={styles.user}>
-                <span className={styles.avatar} aria-hidden="true">
-                  {user.initials}
-                </span>
+                <Avatar
+                  person={{ name: user.fullName, initials: user.initials, avatarUrl: user.avatarUrl }}
+                  size={34}
+                  decorative
+                  className={styles.avatar}
+                />
                 <span className={styles.userName}>{user.firstName}</span>
               </span>
               <LogoutButton className={buttonClass('outlineDark', 'md')} />
@@ -47,7 +51,7 @@ export async function Header() {
               Daxil ol
             </Link>
           )}
-          <Link href="/games/new" className={buttonClass('dark', 'md')}>
+          <Link href="/games/new" className={buttonClass('primary', 'md')}>
             Oyun yarat
           </Link>
         </div>

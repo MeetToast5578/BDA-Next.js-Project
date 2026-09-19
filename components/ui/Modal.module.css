@@ -10,7 +10,7 @@
 }
 
 .dialog::backdrop {
-  background: rgba(11, 0, 58, 0.45);
+  background: color-mix(in srgb, var(--color-primary-night) 45%, transparent);
   -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
 }
@@ -56,7 +56,7 @@
 }
 
 .close:hover {
-  background: rgba(53, 37, 205, 0.12);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
 }
 
 .heading {

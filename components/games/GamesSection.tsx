@@ -7,7 +7,11 @@ import styles from './GamesSection.module.css'
 import { SPORT_LABELS } from './sports'
 import { SportTabs } from './SportTabs'
 
-/** Sport tabs, filter summary and the game grid; shared by the homepage and "Bütün oyunlar". */
+/**
+ * Sport tabs, filter summary and the game grid; shared by the homepage and "Bütün oyunlar".
+ * With `titleLevel="h1"` it is a page of its own: a "← Ana səhifəyə qayıt" link and the title come
+ * before the tabs.
+ */
 export function GamesSection({
   id,
   eyebrow,
@@ -21,7 +25,7 @@ export function GamesSection({
   seeAllHref,
 }: {
   id?: string
-  eyebrow: string
+  eyebrow?: string
   title: string
   titleLevel?: 'h1' | 'h2'
   sports: SportSummary[]
@@ -32,41 +36,58 @@ export function GamesSection({
   seeAllHref?: string
 }) {
   const Heading = titleLevel
+  const standalone = titleLevel === 'h1'
   const filterLabel = sport ? SPORT_LABELS[sport] : 'Bütün idman növləri'
+  const homeLink = (
+    <Link href="/" className={styles.back}>
+      <span aria-hidden="true">←</span> Ana səhifəyə qayıt
+    </Link>
+  )
+
+  const head = (
+    <div className={styles.head}>
+      <div className={styles.headText}>
+        {eyebrow && <p className={styles.eyebrow}>{eyebrow}</p>}
+        <Heading id={`${id ?? 'games'}-title`} className={styles.title}>
+          {title}
+        </Heading>
+        <p className={styles.filter} aria-live="polite">
+          Aktiv filtr: {filterLabel} • Bakı
+        </p>
+      </div>
+      {seeAllHref && (
+        <Link href={seeAllHref} className={styles.seeAll}>
+          Hamısına bax <span aria-hidden="true">→</span>
+        </Link>
+      )}
+    </div>
+  )
 
   return (
     <section id={id} className={`container ${styles.section}`} aria-labelledby={`${id ?? 'games'}-title`}>
-      {/* Keeps headings in order: on a page whose h1 is this section's title, the tabs need no heading. */}
-      {titleLevel === 'h2' && <h2 className="visually-hidden">Nə oynamaq istəyirsən?</h2>}
+      {standalone ? (
+        <div className={styles.intro}>
+          {homeLink}
+          {head}
+        </div>
+      ) : (
+        // Keeps headings in order: on a page whose h1 is this section's title, the tabs need no heading.
+        <h2 className="visually-hidden">Nə oynamaq istəyirsən?</h2>
+      )}
       <SportTabs sports={sports} active={sport} basePath={basePath} />
 
       <div className={styles.games}>
-        <div className={styles.head}>
-          <div className={styles.headText}>
-            <p className={styles.eyebrow}>{eyebrow}</p>
-            <Heading id={`${id ?? 'games'}-title`} className={styles.title}>
-              {title}
-            </Heading>
-            <p className={styles.filter} aria-live="polite">
-              Aktiv filtr: {filterLabel} • Bakı
-            </p>
-          </div>
-          {seeAllHref && (
-            <Link href={seeAllHref} className={styles.seeAll}>
-              Hamısına bax <span aria-hidden="true">→</span>
-            </Link>
-          )}
-        </div>
+        {!standalone && head}
 
         <GamesGrid
           key={sport ?? 'all'}
           initial={list}
           sport={sport}
           to={to}
-          cardHeadingLevel={titleLevel === 'h1' ? 'h2' : 'h3'}
+          cardHeadingLevel={standalone ? 'h2' : 'h3'}
           empty={
             <EmptyState
-              headingLevel={titleLevel === 'h1' ? 'h2' : 'h3'}
+              headingLevel={standalone ? 'h2' : 'h3'}
               title="Hələ açıq oyun yoxdur"
               text={
                 sport
@@ -74,9 +95,13 @@ export function GamesSection({
                   : 'Hazırda aktiv oyun tapılmadı. İlk oyunu sən yarat, digərləri sənə qoşulsun.'
               }
               action={
-                <Link href="/games/new" className={buttonClass('primary', 'md')}>
-                  Oyun yarat
-                </Link>
+                <>
+                  <Link href={sport ? `/games/new?sport=${sport}` : '/games/new'} className={buttonClass('primary', 'md')}>
+                    Oyun yarat
+                  </Link>
+                  {/* On the homepage itself a link back home would go nowhere. */}
+                  {standalone && homeLink}
+                </>
               }
             />
           }

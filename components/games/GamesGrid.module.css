@@ -32,7 +32,7 @@
 .spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(53, 37, 205, 0.25);
+  border: 2px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
   border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
@@ -75,6 +75,13 @@
   max-width: 360px;
   margin: 24px auto;
   text-align: center;
+}
+
+.emptyImage {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  margin-bottom: 16px;
 }
 
 .emptyTitle {

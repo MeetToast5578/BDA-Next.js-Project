@@ -19,12 +19,12 @@ Errors always have the shape:
 | "Açıq oyunlar" grid, "Daha çox"         | `GET /api/v1/games?page=N`                           |
 | Empty state ("Hələ açıq oyun yoxdur")   | `GET /api/v1/games?sport=…` returning `games: []`    |
 | Oyun Detalı                             | `GET /api/v1/games/{id}`                             |
-| "Oyuna qoşul" modal → "Bir addım qaldı" | `POST /api/v1/games/{id}/join` (returns host phone)  |
+| "Bir addım qaldı" → "Qoşulmanı təsdiq et" | `POST /api/v1/games/{id}/join` (returns host phone) |
 | Yeni Oyun Yarat: Meydança picker        | `GET /api/v1/venues?sport=…&q=…`                     |
 | Yeni Oyun Yarat: "Oyunu dərc et"        | `POST /api/v1/games`                                 |
 | Daxil ol / Qeydiyyat                    | Payload auth, see [Accounts](#accounts)              |
 
-Joining and creating games require a signed-in account. The design's join and create modals ask for name and phone: prefill them from the profile. The name is taken from the account; the phone is sent with the request.
+Joining and creating games require a signed-in account. The create form asks for the host's phone (prefilled from the profile); the host name is taken from the account. Joining needs no input: "Qoşulmanı təsdiq et" sends the request with no body.
 
 ## Game status
 
@@ -182,7 +182,7 @@ so games that start soon and are nearly full rank first. Ties go to the earlier 
 
 Body (optional): `{ "phone": "+994 50 210 34 56" }`. It defaults to the profile's phone number.
 
-**200** also returns the full game detail, now with `host.phone`, for the "Bir addım qaldı" modal:
+**200** also returns the full game detail, now with `host.phone`:
 
 ```json
 {
@@ -195,7 +195,7 @@ Body (optional): `{ "phone": "+994 50 210 34 56" }`. It defaults to the profile'
 }
 ```
 
-The spot is taken when this request succeeds. "Qoşulmanı təsdiq et" in the design only closes the modal.
+The spot is taken when this request succeeds. The "Bir addım qaldı" modal then closes and the page reloads its data, which shows the new count and the host's phone.
 
 | Status | `code`              | When                                                      |
 | ------ | ------------------- | --------------------------------------------------------- |
@@ -225,7 +225,7 @@ Options for the "Meydança" picker.
 
 ## `POST /api/v1/games`
 
-"Yeni Oyun Yarat" → "Oyunu dərc et". Requires a signed-in user, who becomes the host.
+"Yeni Oyun Yarat" → "Oyunu dərc et". Requires a signed-in user, who becomes the host and, in the same transaction, the game's first participant.
 
 ```json
 {
@@ -234,7 +234,7 @@ Options for the "Meydança" picker.
   "venueId": 3,
   "scheduledDate": "2026-08-04",
   "scheduledTime": "17:00",
-  "currentCount": 0,
+  "currentCount": 1,
   "maxCount": 10,
   "hostPhone": "+994 50 210 34 56",
   "title": "Cümə axşamı 5-ə-5"
@@ -247,8 +247,8 @@ Options for the "Meydança" picker.
 | `level`         | `beginner`/`medium`/`high` or `Başlanğıc`/`Orta`/`Yüksək`                  |
 | `venueId`       | From `GET /api/v1/venues`                                                  |
 | `scheduledDate`, `scheduledTime` | Baku local time, `YYYY-MM-DD` and `HH:mm`; must be in the future |
-| `currentCount`  | "Mövcud iştirakçı sayı": players already in, `0 … maxCount − 1`. The game opens with `maxCount − currentCount` spots |
-| `maxCount`      | 1–100                                                                      |
+| `currentCount`  | "Mövcud iştirakçı sayı": players already in, including the host, `1 … maxCount − 1` (0 or missing counts as 1). The game opens with `maxCount − currentCount` spots |
+| `maxCount`      | Even (two equal sides), from 2 up to the sport's full size: football 22, basketball 10, tennis 4 |
 | `hostPhone`     | Optional if the profile has a phone number; shown to players after they join |
 | `title`         | Optional, defaults to "Futbol oyunu" etc. (the design has no title field)  |
 
@@ -263,8 +263,8 @@ Payload's built-in auth endpoints on the `users` collection:
 | Screen                 | Request                                                                                 |
 | ---------------------- | --------------------------------------------------------------------------------------- |
 | Qeydiyyat              | `POST /api/users` `{ "email", "password", "fullName": "<Ad> <Soyad>" }`. Password ≥ 8 characters |
-| Daxil ol               | `POST /api/users/login` `{ "email", "password" }` (sets the `payload-token` cookie)     |
-| Google ilə davam et    | Link to `/api/auth/google`                                                              |
+| Daxil ol               | `POST /api/users/login` `{ "email", "password" }` (sets the `payload-token` cookie). A wrong email or password is a generic `401`; 5 failures lock the account for 10 minutes (also a `401`, with a "locked" message) |
+| Google ilə davam et    | Link to `/api/auth/google`. The callback verifies the code with Google server-side, requires a verified email, and creates the account on first sign-in (name, email, profile picture) |
 | Şifrəni unutmusunuz?   | `POST /api/users/forgot-password` `{ "email" }`. No email adapter is configured yet, so the mail is only printed to the server log |
 | Current user           | `GET /api/users/me`                                                                     |
 | Log out                | `POST /api/users/logout`                                                                |

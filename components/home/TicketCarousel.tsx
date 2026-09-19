@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 
 import type { FeaturedGame } from '@/lib/api-types'
 import { AvatarStack, ProgressBar, SportBadge } from '@/components/games/bits'
@@ -43,9 +43,8 @@ export function TicketCarousel({ games }: { games: FeaturedGame[] }) {
   const loops = games.length > 1
   /** Index of the first slide of the middle copy — the real, non-cloned one. */
   const offset = loops ? games.length : 0
-  // Before hydration the track is still at scrollLeft 0, which centres slide 0. Starting `active`
-  // anywhere else would paint the centred card at the shrunken neighbour scale until the effect below
-  // recentres it. Slide 0 shows the same game as slide `offset`, so that first jump is invisible.
+  // Before hydration the track is still at scrollLeft 0, which centres slide 0. Slide 0 shows the same
+  // game as slide `offset`, so the effect below moving there is invisible.
   const [active, setActive] = useState(0)
   const activeRef = useRef(0)
 
@@ -112,10 +111,12 @@ export function TicketCarousel({ games }: { games: FeaturedGame[] }) {
       frame.current = requestAnimationFrame(syncActive)
       scheduleSettle()
     }
-    const onPointerDown = () => {
+    // Touch events, not pointer events: the browser fires `pointercancel` as soon as it takes over the
+    // pan, so a pointer-based flag would clear while the finger is still down.
+    const onTouchStart = () => {
       dragging.current = true
     }
-    const onPointerUp = () => {
+    const onTouchEnd = () => {
       dragging.current = false
       scheduleSettle()
     }
@@ -127,17 +128,17 @@ export function TicketCarousel({ games }: { games: FeaturedGame[] }) {
     }
 
     track.addEventListener('scroll', onScroll, { passive: true })
-    track.addEventListener('pointerdown', onPointerDown, { passive: true })
-    window.addEventListener('pointerup', onPointerUp, { passive: true })
-    window.addEventListener('pointercancel', onPointerUp, { passive: true })
+    track.addEventListener('touchstart', onTouchStart, { passive: true })
+    window.addEventListener('touchend', onTouchEnd, { passive: true })
+    window.addEventListener('touchcancel', onTouchEnd, { passive: true })
     window.addEventListener('resize', onResize)
     return () => {
       cancelAnimationFrame(frame.current)
       clearTimeout(settle.current)
       track.removeEventListener('scroll', onScroll)
-      track.removeEventListener('pointerdown', onPointerDown)
-      window.removeEventListener('pointerup', onPointerUp)
-      window.removeEventListener('pointercancel', onPointerUp)
+      track.removeEventListener('touchstart', onTouchStart)
+      window.removeEventListener('touchend', onTouchEnd)
+      window.removeEventListener('touchcancel', onTouchEnd)
       window.removeEventListener('resize', onResize)
     }
   }, [recenter, syncActive])
@@ -168,7 +169,6 @@ export function TicketCarousel({ games }: { games: FeaturedGame[] }) {
               <li
                 key={index}
                 className={styles.slide}
-                data-position={index < active ? 'before' : index > active ? 'after' : 'active'}
                 aria-roledescription={clone ? undefined : 'slayd'}
                 aria-label={clone ? undefined : `${(index % games.length) + 1} / ${games.length}`}
                 aria-hidden={clone || undefined}
@@ -208,7 +208,8 @@ export function TicketCarousel({ games }: { games: FeaturedGame[] }) {
   )
 }
 
-function Ticket({ game }: { game: FeaturedGame }) {
+/** Memoised: the carousel re-renders whenever the centred card changes, mid-swipe. */
+const Ticket = memo(function Ticket({ game }: { game: FeaturedGame }) {
   const href = `/games/${game.id}`
   const place = [game.venue.name, [game.venue.district, game.venue.cityLabel].filter(Boolean).join(', ')]
     .filter(Boolean)
@@ -266,4 +267,4 @@ function Ticket({ game }: { game: FeaturedGame }) {
       </div>
     </article>
   )
-}
+})

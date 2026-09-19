@@ -4,7 +4,7 @@ import { headers } from 'next/headers'
 import { cache } from 'react'
 
 import type { CurrentUser } from '@/lib/api-types'
-import { initialsOf } from '@/lib/game-backend'
+import { initialsOf, userAvatarUrl } from '@/lib/game-backend'
 import { getPayloadClient } from '@/lib/game-queries'
 
 /**
@@ -22,6 +22,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     fullName,
     firstName: fullName.split(/\s+/)[0],
     initials: initialsOf(fullName),
+    avatarUrl: userAvatarUrl(user),
     email: user.email,
     phoneNumber: user.phoneNumber ?? null,
   }

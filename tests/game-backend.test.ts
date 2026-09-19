@@ -17,6 +17,8 @@ import {
   startOfBakuDay,
   toGameCard,
 } from '@/lib/game-backend'
+import { formatDateText, formatTimeText, parseDateText, parseTimeText } from '@/lib/date-input'
+import { formatLocalPhone } from '@/lib/phone'
 
 const HOUR_MS = 60 * 60 * 1000
 // Sunday 13 September 2026, 14:00 in Baku.
@@ -210,6 +212,83 @@ describe('normalizePhone', () => {
   })
 })
 
+describe('formatLocalPhone', () => {
+  it('groups the digits after +994 as they are typed', () => {
+    expect(formatLocalPhone('7')).toBe('7')
+    expect(formatLocalPhone('775')).toBe('77 5')
+    expect(formatLocalPhone('775386')).toBe('77 538 6')
+    expect(formatLocalPhone('775386004')).toBe('77 538 60 04')
+    expect(formatLocalPhone('77 538 60 049')).toBe('77 538 60 04')
+  })
+
+  it('drops pasted or autofilled prefixes', () => {
+    expect(formatLocalPhone('+994 77 538 60 04')).toBe('77 538 60 04')
+    expect(formatLocalPhone('+994775386004')).toBe('77 538 60 04')
+    expect(formatLocalPhone('077 538 60 04')).toBe('77 538 60 04')
+    // A local number that happens to start with 994 (Bakcell 99) is kept.
+    expect(formatLocalPhone('994123456')).toBe('99 412 34 56')
+  })
+
+  it('round-trips through normalizePhone', () => {
+    expect(normalizePhone(`+994 ${formatLocalPhone('77abc5386004')}`)).toBe('+994775386004')
+  })
+})
+
+describe('typed date and time', () => {
+  it('reads a date in the chosen order, with any separator and 2- or 4-digit years', () => {
+    expect(parseDateText('19.09.2026', 'dd.mm.yyyy')).toBe('2026-09-19')
+    expect(parseDateText('19/9/26', 'dd.mm.yyyy')).toBe('2026-09-19')
+    expect(parseDateText('19 09 2026', 'dd/mm/yyyy')).toBe('2026-09-19')
+    expect(parseDateText('09/19/2026', 'mm/dd/yyyy')).toBe('2026-09-19')
+    expect(parseDateText('2026-09-19', 'yyyy-mm-dd')).toBe('2026-09-19')
+    // The same text means a different day depending on the format.
+    expect(parseDateText('01/02/2026', 'dd/mm/yyyy')).toBe('2026-02-01')
+    expect(parseDateText('01/02/2026', 'mm/dd/yyyy')).toBe('2026-01-02')
+  })
+
+  it('rejects dates that do not exist or are incomplete', () => {
+    expect(parseDateText('31.02.2026', 'dd.mm.yyyy')).toBeNull()
+    expect(parseDateText('19.13.2026', 'dd.mm.yyyy')).toBeNull()
+    expect(parseDateText('19.09', 'dd.mm.yyyy')).toBeNull()
+    expect(parseDateText('19.09.202', 'dd.mm.yyyy')).toBeNull()
+    expect(parseDateText('sabah', 'dd.mm.yyyy')).toBeNull()
+  })
+
+  it('formats a date back in every format', () => {
+    expect(formatDateText('2026-09-05', 'dd.mm.yyyy')).toBe('05.09.2026')
+    expect(formatDateText('2026-09-05', 'mm/dd/yyyy')).toBe('09/05/2026')
+    expect(formatDateText('2026-09-05', 'yyyy-mm-dd')).toBe('2026-09-05')
+  })
+
+  it('reads 24-hour and AM/PM times', () => {
+    expect(parseTimeText('19:30', '24h')).toBe('19:30')
+    expect(parseTimeText('19.30', '24h')).toBe('19:30')
+    expect(parseTimeText('1930', '24h')).toBe('19:30')
+    expect(parseTimeText('7', '24h')).toBe('07:00')
+    expect(parseTimeText('7:30 PM', '12h')).toBe('19:30')
+    expect(parseTimeText('7pm', '12h')).toBe('19:00')
+    expect(parseTimeText('12:15 a.m.', '12h')).toBe('00:15')
+    expect(parseTimeText('12 PM', '24h')).toBe('12:00')
+    // In the 12-hour format, 19:30 is still unambiguous; 7:30 without AM/PM is not.
+    expect(parseTimeText('19:30', '12h')).toBe('19:30')
+    expect(parseTimeText('7:30', '12h')).toBeNull()
+  })
+
+  it('rejects impossible times', () => {
+    expect(parseTimeText('24:00', '24h')).toBeNull()
+    expect(parseTimeText('19:60', '24h')).toBeNull()
+    expect(parseTimeText('13 PM', '12h')).toBeNull()
+    expect(parseTimeText('axşam', '24h')).toBeNull()
+  })
+
+  it('formats a time back in either format', () => {
+    expect(formatTimeText('19:30', '12h')).toBe('7:30 PM')
+    expect(formatTimeText('00:05', '12h')).toBe('12:05 AM')
+    expect(formatTimeText('12:00', '12h')).toBe('12:00 PM')
+    expect(formatTimeText('19:30', '24h')).toBe('19:30')
+  })
+})
+
 describe('foldForSearch', () => {
   it('matches regardless of case, dotted/dotless i and Azerbaijani letters', () => {
     expect(foldForSearch('Inter Arena')).toBe('inter arena')
@@ -291,10 +370,29 @@ describe('parseCreateGameBody', () => {
   })
 
   it('accepts stored values, a custom title and no phone', () => {
-    expect(parse({ sport: 'tennis', level: 'high', title: '  Axşam tennisi ', hostPhone: '', currentCount: undefined })).toMatchObject({
+    expect(
+      parse({ sport: 'tennis', level: 'high', title: '  Axşam tennisi ', hostPhone: '', maxCount: 4, currentCount: undefined }),
+    ).toMatchObject({
       ok: true,
-      input: { sport: 'tennis', level: 'high', title: 'Axşam tennisi', currentCount: 0, contactPhone: null },
+      input: { sport: 'tennis', level: 'high', title: 'Axşam tennisi', maxCount: 4, currentCount: 1, contactPhone: null },
     })
+  })
+
+  it("limits max players to an even number up to the sport's full size", () => {
+    expect(parse({ maxCount: 22 })).toMatchObject({ ok: true, input: { maxCount: 22 } })
+    expect(parse({ maxCount: 24 })).toMatchObject({ ok: false, code: 'INVALID_MAX_COUNT' })
+    expect(parse({ maxCount: 11 })).toMatchObject({ ok: false, code: 'INVALID_MAX_COUNT' })
+    expect(parse({ sport: 'basketball', maxCount: 10 })).toMatchObject({ ok: true })
+    expect(parse({ sport: 'basketball', maxCount: 12 })).toMatchObject({ ok: false, code: 'INVALID_MAX_COUNT' })
+    expect(parse({ sport: 'tennis', maxCount: 4 })).toMatchObject({ ok: true })
+    expect(parse({ sport: 'tennis', maxCount: 6 })).toMatchObject({ ok: false, code: 'INVALID_MAX_COUNT' })
+    expect(parse({ sport: 'tennis', maxCount: 3, currentCount: 1 })).toMatchObject({ ok: false, code: 'INVALID_MAX_COUNT' })
+  })
+
+  it('always counts the host as the first player', () => {
+    expect(parse({ currentCount: 0 })).toMatchObject({ ok: true, input: { currentCount: 1 } })
+    expect(parse({ maxCount: 2, currentCount: 0 })).toMatchObject({ ok: true, input: { maxCount: 2, currentCount: 1 } })
+    expect(parse({ maxCount: 1, currentCount: 0 })).toMatchObject({ ok: false, code: 'INVALID_MAX_COUNT' })
   })
 
   it('rejects invalid forms', () => {
@@ -305,6 +403,7 @@ describe('parseCreateGameBody', () => {
     expect(parse({ scheduledDate: '2026-09-13', scheduledTime: '13:00' })).toMatchObject({ ok: false, code: 'DATE_IN_PAST' })
     expect(parse({ maxCount: 0 })).toMatchObject({ ok: false, code: 'INVALID_MAX_COUNT' })
     expect(parse({ currentCount: 10 })).toMatchObject({ ok: false, code: 'INVALID_CURRENT_COUNT' })
+    expect(parse({ currentCount: -1 })).toMatchObject({ ok: false, code: 'INVALID_CURRENT_COUNT' })
     expect(parse({ hostPhone: '12345' })).toMatchObject({ ok: false, code: 'INVALID_PHONE' })
     expect(parseCreateGameBody(null, new Date(NOW))).toMatchObject({ ok: false, code: 'INVALID_SPORT' })
   })

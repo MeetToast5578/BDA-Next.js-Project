@@ -32,18 +32,40 @@
 .slide {
   flex: 0 0 var(--slide-w);
   scroll-snap-align: center;
-  transition: transform 0.35s ease;
 }
 
-/* Neighbours shrink towards the active card, so the visual gap stays at --slide-gap. */
-.slide[data-position='before'] {
-  transform: scale(var(--side-scale));
-  transform-origin: right center;
+/*
+ * Neighbours shrink towards the centred card, so the visual gap stays at --slide-gap. The scale is a
+ * scroll-driven animation: it tracks the scroll position itself, off the main thread, so it never lags
+ * a swipe or pops at a threshold. Browsers without scroll-driven animations show every card full size.
+ * It scales the ticket, never the slide: snap positions come from the slide's transformed box, so a
+ * scaled slide would snap off-centre.
+ */
+@supports (animation-timeline: view()) {
+  .ticket {
+    animation: slide-focus linear both;
+    /* Both must follow the shorthand, which resets them. */
+    animation-timeline: view(inline);
+    /* 0% = one card right of centre, 50% = centred, 100% = one card left of centre. */
+    animation-range:
+      cover calc(50% - var(--slide-w) - var(--slide-gap))
+      cover calc(50% + var(--slide-w) + var(--slide-gap));
+  }
 }
 
-.slide[data-position='after'] {
-  transform: scale(var(--side-scale));
-  transform-origin: left center;
+@keyframes slide-focus {
+  from {
+    transform: scale(var(--side-scale));
+    transform-origin: left center;
+  }
+  50% {
+    transform: none;
+    transform-origin: center;
+  }
+  to {
+    transform: scale(var(--side-scale));
+    transform-origin: right center;
+  }
 }
 
 /* Edge fade: masks the cards themselves, so it blends into whatever part of the hero gradient is behind. */
@@ -77,7 +99,7 @@
   gap: 6px;
   padding: 8px;
   border-radius: 99px;
-  background: rgba(11, 0, 58, 0.4);
+  background: color-mix(in srgb, var(--color-primary-night) 40%, transparent);
   font-size: 11px;
   font-weight: 600;
   line-height: 1;

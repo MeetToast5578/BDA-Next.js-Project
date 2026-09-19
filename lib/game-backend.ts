@@ -13,12 +13,17 @@ export const CITY_OPTIONS = [{ label: 'Bakı', value: 'baku' }]
 const CITY_ALIASES: Record<string, string> = { baku: 'baku', bakı: 'baku', baki: 'baku' }
 const CITY_LABELS: Record<string, string> = Object.fromEntries(CITY_OPTIONS.map(({ label, value }) => [value, label]))
 
-export const SPORT_META: Record<string, { label: string; iconKey: string; image: string }> = {
-  football: { label: 'Futbol', iconKey: 'football', image: '/images/game-football-1-7880cc.png' },
-  basketball: { label: 'Basketbol', iconKey: 'basketball', image: '/images/game-basketball-1-4a0ddf.png' },
-  tennis: { label: 'Tennis', iconKey: 'tennis', image: '/images/game-tennis-1-3ee73d.png' },
+/** `maxPlayers` is the most a game of that sport can have: two full sides (11, 5 and 2 a side). */
+export const SPORT_META: Record<string, { label: string; iconKey: string; image: string; maxPlayers: number }> = {
+  football: { label: 'Futbol', iconKey: 'football', image: '/images/game-football-1-7880cc.png', maxPlayers: 22 },
+  basketball: { label: 'Basketbol', iconKey: 'basketball', image: '/images/game-basketball-1-4a0ddf.png', maxPlayers: 10 },
+  tennis: { label: 'Tennis', iconKey: 'tennis', image: '/images/game-tennis-1-3ee73d.png', maxPlayers: 4 },
 }
 export const SPORTS = Object.keys(SPORT_META)
+
+/** A game's max players is even (two equal sides), from one a side up to the sport's `maxPlayers`. */
+export const MIN_MAX_PLAYERS = 2
+export const PLAYER_COUNT_STEP = 2
 
 export const LEVEL_LABELS: Record<string, string> = {
   beginner: 'Başlanğıc',
@@ -243,7 +248,8 @@ type CreateGameParseResult = { ok: true; input: CreateGameInput } | { ok: false;
 /**
  * Validates the create-game form. `sport` and `level` accept the stored values or the Azerbaijani
  * labels; date and time are Baku local time; `currentCount` is "Mövcud iştirakçı sayı", the players
- * already in, so the game opens with maxCount - currentCount free spots.
+ * already in, so the game opens with maxCount - currentCount free spots. The host is always the first
+ * player, so currentCount is at least 1.
  */
 export function parseCreateGameBody(body: unknown, now = new Date()): CreateGameParseResult {
   const fail = (code: string, message: string) => ({ ok: false as const, code, message })
@@ -270,12 +276,14 @@ export function parseCreateGameBody(body: unknown, now = new Date()): CreateGame
   if (scheduledAt <= now) return fail('DATE_IN_PAST', 'The game must start in the future.')
 
   const maxCount = Number(data.maxCount)
-  if (!Number.isInteger(maxCount) || maxCount < 1 || maxCount > 100) {
-    return fail('INVALID_MAX_COUNT', 'maxCount must be an integer from 1 to 100.')
+  const sportMax = SPORT_META[sport].maxPlayers
+  if (!Number.isInteger(maxCount) || maxCount < MIN_MAX_PLAYERS || maxCount > sportMax || maxCount % PLAYER_COUNT_STEP !== 0) {
+    return fail('INVALID_MAX_COUNT', `maxCount must be an even number from ${MIN_MAX_PLAYERS} to ${sportMax} for ${sport}.`)
   }
-  const currentCount = data.currentCount === undefined || data.currentCount === '' ? 0 : Number(data.currentCount)
-  if (!Number.isInteger(currentCount) || currentCount < 0 || currentCount >= maxCount) {
-    return fail('INVALID_CURRENT_COUNT', 'currentCount must be an integer from 0 to maxCount - 1.')
+  const rawCount = data.currentCount === undefined || data.currentCount === '' ? 1 : Number(data.currentCount)
+  const currentCount = Math.max(1, rawCount)
+  if (!Number.isInteger(rawCount) || rawCount < 0 || currentCount >= maxCount) {
+    return fail('INVALID_CURRENT_COUNT', 'currentCount must be an integer from 1 (the host) to maxCount - 1.')
   }
 
   const hasPhone = data.hostPhone !== undefined && data.hostPhone !== null && data.hostPhone !== ''
@@ -285,6 +293,12 @@ export function parseCreateGameBody(body: unknown, now = new Date()): CreateGame
   const title = nonEmptyString(data.title)?.trim().slice(0, 120) ?? `${SPORT_META[sport].label} oyunu`
 
   return { ok: true, input: { title, sport, level, venueId, scheduledAt, maxCount, currentCount, contactPhone } }
+}
+
+/** An uploaded profile picture, else the Google picture saved at sign-in. */
+export function userAvatarUrl(user: unknown) {
+  const doc = asDoc(user)
+  return mediaUrl(asDoc(doc?.profilePicture)?.url) ?? nonEmptyString(doc?.avatarUrl)
 }
 
 function resolveCoverImage(game: Doc, fallbackUrl: string) {
@@ -322,7 +336,7 @@ export function normalizeGameRecord(raw: unknown, now = Date.now()) {
     host: {
       name: hostName,
       initials: initialsOf(hostName),
-      avatarUrl: mediaUrl(asDoc(host?.profilePicture)?.url),
+      avatarUrl: userAvatarUrl(host),
     },
   }
 }

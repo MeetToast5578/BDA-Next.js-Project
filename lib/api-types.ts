@@ -38,6 +38,7 @@ export type CurrentUser = {
   fullName: string
   firstName: string
   initials: string
+  avatarUrl: string | null
   email: string
   phoneNumber: string | null
 }

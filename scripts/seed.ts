@@ -163,9 +163,10 @@ const GAME_TITLES: Record<Sport, string[]> = {
 
 const LEVELS: Level[] = ['beginner', 'medium', 'high']
 const MAX_PLAYERS: Record<Sport, number[]> = {
+  // Even and within SPORT_META's maxPlayers, as the create-game API requires.
   football: [10, 12, 14],
-  basketball: [8, 10, 12],
-  tennis: [4, 6, 8],
+  basketball: [6, 8, 10],
+  tennis: [2, 4],
 }
 /** Baku local kick-off times; mornings and evenings are the busy ones. */
 const SLOT_HOURS = [9, 11, 13, 15, 17, 18, 19, 20, 21, 22]

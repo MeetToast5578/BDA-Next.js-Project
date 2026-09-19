@@ -36,6 +36,9 @@ export const Users: CollectionConfig = {
     ],
   },
   auth: {
+    // Payload's defaults, spelled out: 5 wrong passwords lock the account for 10 minutes.
+    maxLoginAttempts: 5,
+    lockTime: 10 * 60 * 1000,
     strategies: [
       {
         name: 'google',
@@ -105,6 +108,19 @@ export const Users: CollectionConfig = {
       name: 'profilePicture',
       type: 'upload',
       relationTo: 'media',
+    },
+    {
+      // Google profile picture, set at Google sign-in. Admin-only so users can't point it at
+      // arbitrary hosts (next.config.ts only allows Google's image host).
+      name: 'avatarUrl',
+      type: 'text',
+      access: {
+        create: adminOnlyField,
+        update: adminOnlyField,
+      },
+      admin: {
+        readOnly: true,
+      },
     },
     {
       name: 'googleId',

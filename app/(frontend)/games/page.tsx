@@ -23,8 +23,7 @@ export default async function AllGamesPage({ searchParams }: Props) {
 
   return (
     <GamesSection
-      eyebrow="Bütün oyunlar"
-      title="Bakıda qoşula biləcəyin bütün oyunlar"
+      title="Bütün açıq oyunlar"
       titleLevel="h1"
       sports={sports}
       sport={sport}

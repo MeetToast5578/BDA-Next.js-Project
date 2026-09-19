@@ -22,6 +22,8 @@
 }
 
 .sportSolid {
+  /* Opaque, so the blur would be invisible — and it is costly inside the scrolling carousel. */
+  backdrop-filter: none;
   background: var(--color-accent);
   color: var(--color-badge-text);
   height: auto;

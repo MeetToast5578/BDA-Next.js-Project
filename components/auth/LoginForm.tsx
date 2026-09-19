@@ -13,10 +13,12 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function loginErrorMessage(error: unknown) {
   if (!(error instanceof ApiError)) return 'Daxil olmaq mümkün olmadı.'
-  if (error.status === 401) return 'Email və ya şifrə yanlışdır.'
-  if (error.status === 423 || error.status === 429) {
-    return 'Çox sayda uğursuz cəhd oldu. Bir az sonra yenidən cəhd edin.'
+  // Payload also answers 401 for an account locked after too many failed attempts (collections/Users.ts).
+  if (error.status === 429 || /locked/i.test(error.message)) {
+    return 'Çox sayda uğursuz cəhd oldu. 10 dəqiqə sonra yenidən cəhd edin.'
   }
+  // Deliberately doesn't say which one is wrong, or whether the account exists.
+  if (error.status === 401) return 'Email və ya şifrə yanlışdır. Hesabınız yoxdursa, qeydiyyatdan keçin.'
   return error.message
 }
 

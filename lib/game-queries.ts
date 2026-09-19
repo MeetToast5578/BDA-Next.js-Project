@@ -1,7 +1,7 @@
 import { unstable_cache } from 'next/cache'
 import type { Payload, Where } from 'payload'
 
-import { GAMES_CACHE_TAG } from '@/lib/cache-tags'
+import { GAMES_CACHE_TAG, invalidateGamesCache } from '@/lib/cache-tags'
 import {
   DEFAULT_CITY,
   FEATURED_WINDOW_HOURS,
@@ -9,12 +9,12 @@ import {
   deriveAvailability,
   foldForSearch,
   initialsOf,
-  mediaUrl,
   normalizeGameRecord,
   normalizePhone,
   normalizeVenue,
   rankFeatured,
   toGameCard,
+  userAvatarUrl,
   type CreateGameInput,
   type GameListQuery,
 } from '@/lib/game-backend'
@@ -39,7 +39,7 @@ const CARD_SELECT = {
   image: true,
 } as const
 
-const CARD_POPULATE = { users: { fullName: true, profilePicture: true } } as const
+const CARD_POPULATE = { users: { fullName: true, profilePicture: true, avatarUrl: true } } as const
 
 type ParticipantPreview = { name: string; initials: string; avatarUrl: string | null }
 
@@ -77,7 +77,7 @@ async function findParticipantPreviews(payload: Payload, gameIds: Array<number |
     collection: 'game-participants',
     where: { game: { in: gameIds } },
     select: { game: true, user: true },
-    populate: { users: { fullName: true, profilePicture: true }, games: { title: true } },
+    populate: { ...CARD_POPULATE, games: { title: true } },
     sort: 'createdAt',
     depth: 2,
     pagination: false,
@@ -90,8 +90,7 @@ async function findParticipantPreviews(payload: Payload, gameIds: Array<number |
     if (preview.length >= PARTICIPANT_PREVIEW_SIZE) continue
     const user = typeof participant.user === 'object' ? participant.user : null
     const name = user?.fullName || 'OyunaGəl istifadəçisi'
-    const picture = typeof user?.profilePicture === 'object' ? user.profilePicture : null
-    preview.push({ name, initials: initialsOf(name), avatarUrl: mediaUrl(picture?.url) })
+    preview.push({ name, initials: initialsOf(name), avatarUrl: userAvatarUrl(user) })
     previews.set(gameId, preview)
   }
   return previews
@@ -253,25 +252,46 @@ export async function createGame(host: { id: number; phoneNumber?: string | null
   const contactPhone = input.contactPhone ?? normalizePhone(host.phoneNumber)
   if (!contactPhone) return { ok: false, code: 'PHONE_REQUIRED', message: 'Host telefon nömrəsi tələb olunur.' }
 
-  const created = await payload.create({
-    collection: 'games',
-    overrideAccess: true,
-    data: {
-      title: input.title,
-      sport: input.sport as 'football' | 'basketball' | 'tennis',
-      level: input.level as 'beginner' | 'medium' | 'high',
-      arena: venue.id,
-      host: host.id,
-      scheduledAt: input.scheduledAt.toISOString(),
-      maxPlayers: input.maxCount,
-      availablePlayers: input.maxCount - input.currentCount,
-      contactPhone,
-      status: 'scheduled',
-    },
-  })
+  // One transaction: the game and its first player, the host, are created together or not at all.
+  const transactionID = (await payload.db.beginTransaction()) ?? undefined
+  const req = { transactionID }
+  let gameId: number
+  try {
+    const created = await payload.create({
+      collection: 'games',
+      overrideAccess: true,
+      req,
+      data: {
+        title: input.title,
+        sport: input.sport as 'football' | 'basketball' | 'tennis',
+        level: input.level as 'beginner' | 'medium' | 'high',
+        arena: venue.id,
+        host: host.id,
+        scheduledAt: input.scheduledAt.toISOString(),
+        maxPlayers: input.maxCount,
+        // currentCount includes the host (parseCreateGameBody), so the host's spot is already taken.
+        availablePlayers: input.maxCount - input.currentCount,
+        contactPhone,
+        status: 'scheduled',
+      },
+    })
+    await payload.create({
+      collection: 'game-participants',
+      overrideAccess: true,
+      req,
+      data: { game: created.id, user: host.id, phone: contactPhone },
+    })
+    if (transactionID !== undefined) await payload.db.commitTransaction(transactionID)
+    gameId = created.id
+  } catch (error) {
+    if (transactionID !== undefined) await payload.db.rollbackTransaction(transactionID)
+    throw error
+  }
+  // The collection hooks already expired the cache, but before the commit; a read in between could refill it.
+  invalidateGamesCache()
 
-  const game = await getGameDetail(created.id, host.id)
-  if (!game) throw new Error(`Game ${created.id} disappeared right after creation`)
+  const game = await getGameDetail(gameId, host.id)
+  if (!game) throw new Error(`Game ${gameId} disappeared right after creation`)
   return { ok: true, game }
 }
 

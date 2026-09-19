@@ -3,13 +3,18 @@
  * A few text colors are darker than in Figma so they pass WCAG AA; those are marked "AA".
  */
 :root {
-  /* Brand */
+  /*
+   * Brand (indigo). Only these four are literal colors: every other brand shade, here and in the
+   * component CSS, is derived from them with color-mix(), so the brand changes in one place.
+   */
   --color-primary: #3525cd;
   --color-primary-hover: #2a1cb3;
   --color-primary-deep: #1b1367;
-  --color-primary-tint: rgba(53, 37, 205, 0.05);
-  --color-primary-border: rgba(53, 37, 205, 0.2);
-  --color-primary-border-soft: rgba(53, 37, 205, 0.15);
+  --color-primary-night: #0b003a; /* overlays and shadows */
+  --color-primary-tint: color-mix(in srgb, var(--color-primary) 5%, transparent);
+  --color-primary-border: color-mix(in srgb, var(--color-primary) 20%, transparent);
+  --color-primary-border-soft: color-mix(in srgb, var(--color-primary) 15%, transparent);
+  --color-primary-soft: color-mix(in srgb, var(--color-primary) 8%, #fff);
   --color-accent: #e8a33d;
   --color-accent-hover: #f0b458;
   --color-on-accent: #5c3a0e;
@@ -37,21 +42,21 @@
   --color-track: #e9edff;
   --color-track-warm: #efeee7;
   --color-chip: #f3f5ee;
-  --color-footer: #141a16;
+  --color-footer: var(--color-primary);
   --color-footer-border: rgba(222, 227, 214, 0.3);
   --color-footer-text: rgba(255, 255, 255, 0.65); /* AA: Figma 0.35 is 3.2:1 */
   --color-footer-logo: rgba(255, 255, 255, 0.7);
 
-  /* Levels */
+  /* Levels: semantic colors (Başlanğıc green, Yüksək red), deliberately not the brand color. */
   --level-beginner-bg: rgba(102, 210, 0, 0.7);
   --level-beginner-border: #6db926;
   --level-medium-bg: rgba(228, 160, 16, 0.7);
   --level-medium-border: #c69731;
-  --level-high-bg: rgba(38, 92, 255, 0.7);
-  --level-high-border: #4167d9;
+  --level-high-bg: rgba(220, 38, 38, 0.7);
+  --level-high-border: #c81e1e;
 
   /* Hero */
-  --hero-gradient: linear-gradient(104.13deg, #3525cd 46.78%, #1b1367 109.51%);
+  --hero-gradient: linear-gradient(104.13deg, var(--color-primary) 46.78%, var(--color-primary-deep) 109.51%);
   --hero-text-soft: #dee3d6;
   --glass-bg: rgba(255, 255, 255, 0.16);
   --glass-border: rgba(222, 227, 214, 0.1);
@@ -89,9 +94,11 @@
 
   /* Effects */
   --shadow-card: 0 12px 28px -10px rgba(131, 84, 0, 0.1), 0 4px 12px 0 rgba(0, 0, 0, 0.02);
-  --shadow-button: 0 4px 6px -1px rgba(53, 37, 205, 0.2), 0 2px 4px -2px rgba(53, 37, 205, 0.2);
+  --shadow-button:
+    0 4px 6px -1px color-mix(in srgb, var(--color-primary) 20%, transparent),
+    0 2px 4px -2px color-mix(in srgb, var(--color-primary) 20%, transparent);
   --shadow-modal: 0 16px 20px rgba(18, 41, 31, 0.12);
-  --focus-ring: #3525cd;
+  --focus-ring: var(--color-primary);
   --focus-ring-on-dark: #ffd48a;
 }
 
