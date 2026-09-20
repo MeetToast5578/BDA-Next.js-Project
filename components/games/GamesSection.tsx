@@ -2,7 +2,8 @@ import Link from 'next/link'
 
 import type { GameListResponse, SportSummary } from '@/lib/api-types'
 import { buttonClass } from '@/components/ui/button'
-import { EmptyState, GamesGrid } from './GamesGrid'
+import { EmptyState } from './EmptyState'
+import { GamesGrid } from './GamesGrid'
 import styles from './GamesSection.module.css'
 import { SPORT_LABELS } from './sports'
 import { SportTabs } from './SportTabs'
@@ -79,33 +80,35 @@ export function GamesSection({
       <div className={styles.games}>
         {!standalone && head}
 
-        <GamesGrid
-          key={sport ?? 'all'}
-          initial={list}
-          sport={sport}
-          to={to}
-          cardHeadingLevel={standalone ? 'h2' : 'h3'}
-          empty={
-            <EmptyState
-              headingLevel={standalone ? 'h2' : 'h3'}
-              title="Hələ açıq oyun yoxdur"
-              text={
-                sport
-                  ? 'Bu idman növü üçün yaxınlıqda aktiv oyun tapılmadı. İlk oyunu sən yarat, digərləri sənə qoşulsun.'
-                  : 'Hazırda aktiv oyun tapılmadı. İlk oyunu sən yarat, digərləri sənə qoşulsun.'
-              }
-              action={
-                <>
-                  <Link href={sport ? `/games/new?sport=${sport}` : '/games/new'} className={buttonClass('primary', 'md')}>
-                    Oyun yarat
-                  </Link>
-                  {/* On the homepage itself a link back home would go nowhere. */}
-                  {standalone && homeLink}
-                </>
-              }
-            />
-          }
-        />
+        {/* "Daha çox" only ever appends, so an empty first page stays empty: the server can pick. */}
+        {list.games.length === 0 ? (
+          <EmptyState
+            headingLevel={standalone ? 'h2' : 'h3'}
+            title="Hələ açıq oyun yoxdur"
+            text={
+              sport
+                ? 'Bu idman növü üçün yaxınlıqda aktiv oyun tapılmadı. İlk oyunu sən yarat, digərləri sənə qoşulsun.'
+                : 'Hazırda aktiv oyun tapılmadı. İlk oyunu sən yarat, digərləri sənə qoşulsun.'
+            }
+            action={
+              <>
+                <Link href={sport ? `/games/new?sport=${sport}` : '/games/new'} className={buttonClass('primary', 'md')}>
+                  Oyun yarat
+                </Link>
+                {/* On the homepage itself a link back home would go nowhere. */}
+                {standalone && homeLink}
+              </>
+            }
+          />
+        ) : (
+          <GamesGrid
+            key={sport ?? 'all'}
+            initial={list}
+            sport={sport}
+            to={to}
+            cardHeadingLevel={standalone ? 'h2' : 'h3'}
+          />
+        )}
       </div>
     </section>
   )

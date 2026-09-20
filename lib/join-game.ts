@@ -23,7 +23,13 @@ class JoinRejected extends Error {
  * succeed, however many app instances are running. The participant insert runs in the same
  * transaction, so a rejected join (including a duplicate) rolls the decrement back.
  */
-export async function claimSpot(payload: Payload, gameId: number, userId: number, phone: string | null = null): Promise<JoinResult> {
+export async function claimSpot(
+  payload: Payload,
+  gameId: number,
+  userId: number,
+  phone: string | null = null,
+  name: string | null = null,
+): Promise<JoinResult> {
   const db = (payload.db as unknown as PostgresAdapter).drizzle
 
   try {
@@ -41,8 +47,8 @@ export async function claimSpot(payload: Payload, gameId: number, userId: number
       if (!game) throw new JoinRejected(await rejectionReason(tx, gameId, userId))
 
       const inserted = await tx.execute(sql`
-        INSERT INTO game_participants (game_id, user_id, phone, updated_at, created_at)
-        VALUES (${gameId}, ${userId}, ${phone}, now(), now())
+        INSERT INTO game_participants (game_id, user_id, phone, name, updated_at, created_at)
+        VALUES (${gameId}, ${userId}, ${phone}, ${name}, now(), now())
         ON CONFLICT (game_id, user_id) DO NOTHING
         RETURNING id
       `)
@@ -92,5 +98,65 @@ export async function recordJoinAttempt(
     })
   } catch (error) {
     console.error('Failed to record join attempt', error)
+  }
+}
+
+export type LeaveErrorCode = 'GAME_NOT_FOUND' | 'GAME_STARTED' | 'HOST_CANNOT_LEAVE' | 'NOT_JOINED'
+
+export type LeaveResult =
+  | { ok: true; remainingSpots: number; maxCount: number }
+  | { ok: false; code: LeaveErrorCode }
+
+class LeaveRejected extends Error {
+  constructor(readonly code: LeaveErrorCode) {
+    super(code)
+  }
+}
+
+/**
+ * Gives a user's spot in a game back.
+ *
+ * The participant row is deleted first and the spot only returned when that DELETE actually removed
+ * something. Without that check a client could call this repeatedly and push `available_players`
+ * past `max_players`, inventing spots in a full game; `FOR UPDATE` on the game serialises two
+ * concurrent leaves so only one of them can find the row. `LEAST` is a second belt: even a stray
+ * row can never take availability above the game's size.
+ */
+export async function releaseSpot(payload: Payload, gameId: number, userId: number): Promise<LeaveResult> {
+  const db = (payload.db as unknown as PostgresAdapter).drizzle
+
+  try {
+    return await db.transaction(async (tx) => {
+      const locked = await tx.execute<{ host_id: number | null; upcoming: boolean; status: string }>(sql`
+        SELECT host_id, status, scheduled_at > now() AS upcoming
+        FROM games
+        WHERE id = ${gameId}
+        FOR UPDATE
+      `)
+      const game = locked.rows[0]
+      if (!game) throw new LeaveRejected('GAME_NOT_FOUND')
+      // The host's spot is the game itself: they delete it rather than leaving it.
+      if (Number(game.host_id) === userId) throw new LeaveRejected('HOST_CANNOT_LEAVE')
+      if (game.status !== 'scheduled' || !game.upcoming) throw new LeaveRejected('GAME_STARTED')
+
+      const removed = await tx.execute(sql`
+        DELETE FROM game_participants
+        WHERE game_id = ${gameId} AND user_id = ${userId}
+        RETURNING id
+      `)
+      if (removed.rows.length === 0) throw new LeaveRejected('NOT_JOINED')
+
+      const freed = await tx.execute<{ available_players: string; max_players: string }>(sql`
+        UPDATE games
+        SET available_players = LEAST(available_players + 1, max_players), updated_at = now()
+        WHERE id = ${gameId}
+        RETURNING available_players, max_players
+      `)
+      const row = freed.rows[0]
+      return { ok: true as const, remainingSpots: Number(row.available_players), maxCount: Number(row.max_players) }
+    })
+  } catch (error) {
+    if (error instanceof LeaveRejected) return { ok: false, code: error.code }
+    throw error
   }
 }

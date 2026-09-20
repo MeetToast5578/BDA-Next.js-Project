@@ -70,6 +70,16 @@
   color: var(--hero-text-soft);
 }
 
+.unavailable {
+  padding: 16px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg);
+  font-size: 15px;
+  line-height: 22px;
+  text-align: center;
+}
+
 .google {
   display: flex;
   align-items: center;
@@ -88,68 +98,6 @@
   background: var(--color-primary-soft);
 }
 
-.divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 13px;
-  color: var(--hero-text-soft);
-}
-
-.divider::before,
-.divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: rgba(222, 227, 214, 0.25);
-}
-
-.card {
-  --focus-ring: var(--color-primary);
-  padding: 32px;
-  border-radius: 20px;
-  background: var(--color-surface);
-  color: var(--color-heading);
-  box-shadow: 0 24px 48px -24px color-mix(in srgb, var(--color-primary-night) 50%, transparent);
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.links {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 8px 16px;
-  font-size: 13px;
-  color: var(--color-muted);
-}
-
-.linkButton {
-  padding: 0;
-  border: 0;
-  border-radius: 4px;
-  background: none;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-primary);
-}
-
-.linkButton:hover,
-.inlineLink:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.inlineLink {
-  border-radius: 4px;
-  font-weight: 600;
-  color: var(--color-primary);
-}
-
 @media (max-width: 600px) {
   .shell {
     padding-top: 40px;
@@ -158,9 +106,5 @@
   .title {
     font-size: 32px;
     line-height: 38px;
-  }
-
-  .card {
-    padding: 24px 20px;
   }
 }

@@ -14,9 +14,9 @@ const JOIN_ERRORS: Record<JoinErrorCode, { status: number; message: string }> = 
 }
 
 /**
- * "Oyuna qoşul". Requires a signed-in user; the optional JSON body `{ phone }` is the number from the
- * join form (defaults to the profile's). The response carries the game with the host's phone for the
- * "Bir addım qaldı" step.
+ * "Oyuna qoşul". Requires a signed-in user. The JSON body `{ name, phone }` is what step 1 of the join
+ * modal collected; both are required and re-validated here, since the client's checks are only a
+ * convenience. The response carries the game with the host's phone for the "Bir addım qaldı" step.
  */
 export async function POST(
   request: Request,
@@ -38,18 +38,23 @@ export async function POST(
   }
   const userId = Number(user.id)
 
-  const body = (await request.json().catch(() => null)) as { phone?: unknown } | null
-  const phoneInput = body?.phone
-  const phone = phoneInput === undefined || phoneInput === null || phoneInput === ''
-    ? normalizePhone(user.phoneNumber)
-    : normalizePhone(phoneInput)
-  if (phoneInput && !phone) {
+  const body = (await request.json().catch(() => null)) as { name?: unknown; phone?: unknown } | null
+
+  // Falls back to the profile so a name or number left out still identifies the player to the host.
+  const name = (typeof body?.name === 'string' ? body.name : '').trim() || (user.fullName ?? '').trim()
+  if (!name) {
+    await recordJoinAttempt(payload, { outcome: 'INVALID_REQUEST', gameId, userId, ip })
+    return apiError('INVALID_NAME', 'Ad və soyad tələb olunur.', 400)
+  }
+
+  const phone = normalizePhone(body?.phone) ?? (body?.phone ? null : normalizePhone(user.phoneNumber))
+  if (!phone) {
     await recordJoinAttempt(payload, { outcome: 'INVALID_REQUEST', gameId, userId, ip })
     return apiError('INVALID_PHONE', 'Telefon nömrəsi yanlışdır, məsələn +994 50 210 34 56.', 400)
   }
 
   try {
-    const result = await claimSpot(payload, gameId, userId, phone)
+    const result = await claimSpot(payload, gameId, userId, phone, name)
 
     if (!result.ok) {
       await recordJoinAttempt(payload, { outcome: result.code, gameId, userId, ip })

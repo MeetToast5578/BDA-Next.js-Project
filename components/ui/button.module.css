@@ -143,3 +143,24 @@
   color: var(--color-muted);
   box-shadow: none;
 }
+
+/* Destructive actions: deleting a game. */
+.danger {
+  background: var(--color-danger);
+  color: #fff;
+}
+
+.danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-danger) 85%, #000);
+}
+
+.outlineDanger {
+  border: 1px solid var(--color-danger);
+  background: transparent;
+  color: var(--color-danger);
+  box-shadow: none;
+}
+
+.outlineDanger:hover:not(:disabled) {
+  background: var(--color-danger-tint);
+}

@@ -19,12 +19,19 @@ Errors always have the shape:
 | "Açıq oyunlar" grid, "Daha çox"         | `GET /api/v1/games?page=N`                           |
 | Empty state ("Hələ açıq oyun yoxdur")   | `GET /api/v1/games?sport=…` returning `games: []`    |
 | Oyun Detalı                             | `GET /api/v1/games/{id}`                             |
+| Qoşulma modalı, addım 1 → addım 2       | Client-side only; nothing is sent yet                |
 | "Bir addım qaldı" → "Qoşulmanı təsdiq et" | `POST /api/v1/games/{id}/join` (returns host phone) |
 | Yeni Oyun Yarat: Meydança picker        | `GET /api/v1/venues?sport=…&q=…`                     |
 | Yeni Oyun Yarat: "Oyunu dərc et"        | `POST /api/v1/games`                                 |
-| Daxil ol / Qeydiyyat                    | Payload auth, see [Accounts](#accounts)              |
+| Oyunu redaktə et (host only)            | `PATCH /api/v1/games/{id}`                           |
+| Oyunu sil (host only)                   | `DELETE /api/v1/games/{id}`                          |
+| Oyundan çıx                             | `POST /api/v1/games/{id}/leave`                      |
+| Profil                                  | `GET` / `PATCH` / `DELETE /api/v1/me`                |
+| Mənim oyunlarım                         | `GET /api/v1/me/games?role=…&when=…`                 |
+| Başqa oyunçunun profili                 | `GET /api/v1/users/{id}`                             |
+| Daxil ol                                | Google only, see [Accounts](#accounts)               |
 
-Joining and creating games require a signed-in account. The create form asks for the host's phone (prefilled from the profile); the host name is taken from the account. Joining needs no input: "Qoşulmanı təsdiq et" sends the request with no body.
+Joining and creating games require a signed-in account. The create form asks for the host's phone (prefilled from the profile); the host name is taken from the account. The join modal is a two-step wizard: step 1 collects the player's name and phone, step 2 shows the host and sends them.
 
 ## Game status
 
@@ -176,11 +183,42 @@ so games that start soon and are nearly full rank first. Ties go to the earlier 
 
 `host.phone` is `null` until the viewer has joined (or is the host), matching "Əlaqə oyuna qoşulduqdan sonra görünür". The button reads "Qoşul - {remainingSpots} yer qalıb" while `status` is `open`. `404 GAME_NOT_FOUND` for unknown IDs.
 
+## `PATCH /api/v1/games/{id}`
+
+"Oyunu redaktə et". **Host only** (admins too); everyone else gets `403`.
+
+Body is the create-game form minus `currentCount`: `sport`, `level`, `venueId`, `scheduledDate`,
+`scheduledTime`, `maxCount`, `hostPhone` and an optional `title`. Who is in the game is decided by
+who joined, not by the host editing a number, so `currentCount` is ignored if sent — only the free
+spots move when `maxCount` changes.
+
+**200** returns `{ "game": { … } }`, the same shape as `GET /api/v1/games/{id}`.
+
+| Status | `code`                    | When                                                         |
+| ------ | ------------------------- | ------------------------------------------------------------ |
+| 400    | `MAX_COUNT_BELOW_PLAYERS` | `maxCount` is lower than the players already in the game     |
+| 400    | `INVALID_MAX_COUNT`       | Not even, or past the sport's limit (e.g. 10 players, tennis)|
+| 400    | `DATE_IN_PAST`            | The new start time has already passed                        |
+| 400    | `VENUE_SPORT_MISMATCH`    | The venue does not host the chosen sport                      |
+| 401    | `UNAUTHENTICATED`         | Not signed in                                                 |
+| 403    | `NOT_GAME_HOST`           | Signed in, but not this game's host                           |
+| 404    | `GAME_NOT_FOUND`          |                                                               |
+
+## `DELETE /api/v1/games/{id}`
+
+"Oyunu sil". **Host only** (admins too). Deletes the game and every participant row pointing at it —
+the foreign key is `ON DELETE SET NULL`, so the participants have to be removed explicitly or they
+are left orphaned and keep turning up in counts. Both happen in one transaction.
+
+Join attempts are kept: `join_attempts.gameId` is a plain number, so the audit log survives the game.
+
+**200** returns `{ "ok": true, "id": "12" }`. Errors are the `401` / `403` / `404` rows above.
+
 ## `POST /api/v1/games/{id}/join`
 
 "Oyuna qoşul". Requires a signed-in user (Payload session or Google session cookie).
 
-Body (optional): `{ "phone": "+994 50 210 34 56" }`. It defaults to the profile's phone number.
+Body: `{ "name": "Kərim Məmmədov", "phone": "+994 50 210 34 56" }` — what step 1 of the join modal collected. Both are re-validated server-side; either one left out falls back to the profile's value, and a `400` follows if the profile has none.
 
 **200** also returns the full game detail, now with `host.phone`:
 
@@ -200,7 +238,8 @@ The spot is taken when this request succeeds. The "Bir addım qaldı" modal then
 | Status | `code`              | When                                                      |
 | ------ | ------------------- | --------------------------------------------------------- |
 | 400    | `INVALID_GAME_ID`   | `id` is not a positive integer                            |
-| 400    | `INVALID_PHONE`     | `phone` isn't an Azerbaijani number                       |
+| 400    | `INVALID_NAME`      | No name given and the profile has none                    |
+| 400    | `INVALID_PHONE`     | `phone` isn't an Azerbaijani number, or none is known     |
 | 401    | `UNAUTHENTICATED`   | Not signed in: send the user to "Daxil ol"                |
 | 404    | `GAME_NOT_FOUND`    |                                                           |
 | 409    | `GAME_FULL`         | No spots left, including losing a race for the last spot  |
@@ -256,21 +295,129 @@ The host name ("Ad Soyad (Host)") comes from the account, so show it read-only.
 
 **201** `{ "game": { …as GET /api/v1/games/{id} } }`. Errors: `401 UNAUTHENTICATED`; `400` with `INVALID_SPORT`, `INVALID_LEVEL`, `INVALID_VENUE`, `INVALID_DATE`, `DATE_IN_PAST`, `INVALID_MAX_COUNT`, `INVALID_CURRENT_COUNT`, `INVALID_PHONE`, `VENUE_NOT_FOUND`, `VENUE_SPORT_MISMATCH`, `PHONE_REQUIRED`.
 
+## `POST /api/v1/games/{id}/leave`
+
+"Oyundan çıx". Requires a signed-in user and hands the spot back to the game. Allowed right up to
+kick-off. The host cannot leave their own game — they delete it instead.
+
+The participant row is deleted first, and the spot only returned when that DELETE actually removed
+something, so calling this repeatedly cannot push `available_players` past `max_players` and invent
+places in a full game. Response body matches the join endpoint.
+
+| Status | `code`              | When                                                  |
+| ------ | ------------------- | ----------------------------------------------------- |
+| 401    | `UNAUTHENTICATED`   | Not signed in                                         |
+| 404    | `GAME_NOT_FOUND`    |                                                       |
+| 409    | `NOT_JOINED`        | Not in this game (also a second leave)                |
+| 409    | `HOST_CANNOT_LEAVE` | The host leaves by deleting the game                  |
+| 409    | `GAME_STARTED`      | Already kicked off, cancelled or finished             |
+
+## Profile
+
+### `GET /api/v1/me`
+
+The signed-in user's profile in one request. Use this rather than Payload's `/api/users/me`, which
+also hands the client `role`, `googleId`, `loginAttempts` and `lockUntil`.
+
+```json
+{
+  "id": "12", "fullName": "Kərim Məmmədov", "firstName": "Kərim", "initials": "KM",
+  "email": "k@example.com", "phoneNumber": "+994502103456",
+  "avatarUrl": "…", "memberSince": "2026-02-11T09:12:00.000Z",
+  "counts": { "hostingUpcoming": 2, "hostedPast": 7, "joinedUpcoming": 1, "played": 14 },
+  "stats": { "playedBySport": [{ "sport": "football", "label": "Futbol", "iconKey": "football", "playedCount": 9 }] }
+}
+```
+
+### `PATCH /api/v1/me`
+
+Body may carry any of `fullName`, `phone`, `profilePictureId`; only the keys sent are changed, so a
+patch never blanks a field it did not mention. `null` (or `""`) clears `phone` / `profilePictureId`.
+Phones go through the same `normalizePhone` as everywhere else, so `055 987 65 43` is stored as
+`+994559876543` and matches numbers saved by the join form.
+
+`email`, `role` and `googleId` are not editable — they are what tie the account to its Google
+identity. A body with only those comes back as `NOTHING_TO_UPDATE`.
+
+**200** returns `{ "profile": { … } }`, as `GET /api/v1/me`.
+
+| Status | `code`               | When                                        |
+| ------ | -------------------- | ------------------------------------------- |
+| 400    | `INVALID_NAME`       | Empty, or over 120 characters               |
+| 400    | `INVALID_PHONE`      | Not an Azerbaijani number                   |
+| 400    | `INVALID_MEDIA`      | `profilePictureId` is not a valid upload id |
+| 400    | `MEDIA_NOT_FOUND`    | That upload does not exist                  |
+| 400    | `NOTHING_TO_UPDATE`  | No editable field was sent                  |
+| 409    | `PHONE_TAKEN`        | Another account already holds that number   |
+
+Uploading the picture itself is Payload's `POST /api/media` (signed-in only); send the returned id
+as `profilePictureId`.
+
+### `DELETE /api/v1/me`
+
+Deletes the account, **and the games it hosts**. That is not optional: `games.host_id` is
+ON DELETE SET NULL and `host` is a required field, so removing the user alone would leave hosted
+games with no host — records nobody can edit or delete, still listed and still carrying a contact
+number. Their participants go too, and so do this user's own participations. One transaction.
+
+Returns `{ "ok": true, "deletedGames": 1 }` and clears both session cookies.
+
+### `GET /api/v1/me/games`
+
+The profile's game lists, in the same card shape as `GET /api/v1/games`.
+
+| Query  | Default    | Notes                                                             |
+| ------ | ---------- | ----------------------------------------------------------------- |
+| `role` | `joined`   | `joined` or `hosting`. `joined` excludes games the viewer hosts   |
+| `when` | `upcoming` | `upcoming` (soonest first) or `past` (most recent first)          |
+| `page` | `1`        | 1-based                                                           |
+| `limit`| `12`       | 1–50                                                              |
+
+### `GET /api/v1/users/{id}`
+
+Another player's public profile — open to anyone, because it carries only what a game card already
+shows about its host, plus the games they are running. Never their email or phone: a host's number
+stays gated behind joining the game (`GET /api/v1/games/{id}`).
+
+```json
+{
+  "id": "12", "fullName": "Kərim Məmmədov", "initials": "KM", "avatarUrl": "…",
+  "memberSince": "…", "counts": { "hostingUpcoming": 2, "hostedPast": 7 },
+  "hostedGames": [{ "…": "game card" }]
+}
+```
+
+`404 USER_NOT_FOUND` for an id that does not exist.
+
 ## Accounts
 
 Payload's built-in auth endpoints on the `users` collection:
 
-| Screen                 | Request                                                                                 |
-| ---------------------- | --------------------------------------------------------------------------------------- |
-| Qeydiyyat              | `POST /api/users` `{ "email", "password", "fullName": "<Ad> <Soyad>" }`. Password ≥ 8 characters |
-| Daxil ol               | `POST /api/users/login` `{ "email", "password" }` (sets the `payload-token` cookie). A wrong email or password is a generic `401`; 5 failures lock the account for 10 minutes (also a `401`, with a "locked" message) |
-| Google ilə davam et    | Link to `/api/auth/google`. The callback verifies the code with Google server-side, requires a verified email, and creates the account on first sign-in (name, email, profile picture) |
-| Şifrəni unutmusunuz?   | `POST /api/users/forgot-password` `{ "email" }`. No email adapter is configured yet, so the mail is only printed to the server log |
-| Current user           | `GET /api/users/me`                                                                     |
-| Log out                | `POST /api/users/logout`                                                                |
+**Google is the only way in.** There is no email/password form and no separate sign-up screen: the
+account is created on first Google sign-in. `POST /api/users` is admin-only, so nothing can register
+an account another way.
 
-Users can only read and edit their own account. Self-registered accounts are always plain users.
+| Screen              | Request                                                                                 |
+| ------------------- | --------------------------------------------------------------------------------------- |
+| Daxil ol            | Link to `/api/auth/google`. The callback verifies the code with Google server-side, requires a verified email, and creates the account on first sign-in (name, email, profile picture), then sets the `google_session` cookie |
+| Current user        | `GET /api/users/me`                                                                     |
+| Log out             | `POST /api/users/logout` (Payload session) **and** `POST /api/auth/logout` (Google session cookie) |
+
+Users can only read and edit their own account. Payload's own email/password login stays enabled for
+the `/admin` panel, but no public screen uses it.
+
+## Unused surfaces
+
+- The `teams` collection and the `homeTeam` / `awayTeam` / `homeScore` / `awayScore` fields on games
+  are not read by any endpoint or screen; only `scripts/seed.ts` writes them.
+- `game-participants` is no longer publicly readable: a user reads their own rows, admins read all.
+  Everything the app renders from it (avatar stacks, counts, "my games") runs with `overrideAccess`,
+  so this only closes the REST route that let anyone enumerate one person's games.
+- GraphQL is disabled (`graphQL: { disable: true }`): `/api/v1` is the only data surface.
 
 ## Images
 
-Uploads to `media` get `thumbnail` (480×270) and `full` (≤1600 wide) WebP renditions. Render them with `next/image`, which also serves AVIF to browsers that accept it. Set `MEDIA_BASE_URL` (a CDN in front of the app, or later an S3 bucket via `@payloadcms/storage-s3`) to get CDN URLs. Games without an uploaded cover fall back to `image`, then to the sport's default image.
+Uploads to `media` get `thumbnail` (480×270) and `full` (≤1600 wide) WebP renditions. Render them with `next/image`, which also serves AVIF to browsers that accept it. Set `MEDIA_BASE_URL` (a CDN in front of the app, or later an S3 bucket via `@payloadcms/storage-s3`) to get CDN URLs. A game's cover is resolved most-specific-first: its own uploaded `coverImage`, then its `image`
+path, then **the venue's `image`** (so a game at a venue with a photo shows that place rather than
+stock art), then the sport's default picture. `coverImage.fallbackUrl` stays the sport default, so a
+venue photo that fails to load still degrades to something sensible.

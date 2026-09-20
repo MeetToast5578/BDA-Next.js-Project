@@ -40,13 +40,18 @@
   color: var(--color-muted);
 }
 
-/* Form on the left, "Seçimlərin xülasəsi" on the right (same column split as the game detail page). */
+/* One column of full-width cards, with "Oyunu dərc et" underneath. */
 .form {
-  display: grid;
-  grid-template-columns: minmax(0, 701fr) minmax(0, 495fr);
-  align-items: start;
+  display: flex;
+  flex-direction: column;
   gap: 20px;
   margin-top: 29px;
+}
+
+.submit {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .main {
@@ -54,49 +59,6 @@
   flex-direction: column;
   gap: 20px;
   min-width: 0;
-}
-
-.summary {
-  position: sticky;
-  top: calc(var(--header-height) + 20px);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 25px;
-  border: 1px solid var(--color-primary-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-}
-
-.summaryList {
-  margin: 0;
-}
-
-.summaryRow {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding-block: 11px;
-  border-bottom: 1px solid var(--color-primary-border-soft);
-  font-size: 14px;
-  line-height: 20px;
-}
-
-.summaryRow dt {
-  color: var(--color-muted);
-}
-
-.summaryRow dd {
-  margin: 0;
-  font-weight: 600;
-  color: var(--color-heading);
-  text-align: right;
-  overflow-wrap: anywhere;
-}
-
-.summaryRow .summaryEmpty {
-  font-weight: 400;
-  color: var(--color-placeholder);
 }
 
 .section {
@@ -368,24 +330,9 @@
   color: var(--color-muted);
 }
 
-/* The summary drops below the form and scrolls with it. */
-@media (max-width: 859px) {
-  .form {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .summary {
-    position: static;
-  }
-}
-
 @media (max-width: 600px) {
   .page {
     padding-block: 24px 64px;
-  }
-
-  .summary {
-    padding: 18px;
   }
 
   .title {
@@ -404,5 +351,77 @@
   .counts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
+  }
+}
+
+/* Read-only participant count on the edit form, where who is in the game isn't the host's to set. */
+.readOnlyCount {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 46px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-chip);
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+/* Deleting a game: kept apart from the form so it can't be hit while saving. */
+.dangerZone {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 32px;
+  padding: 25px;
+  border: 1px solid color-mix(in srgb, var(--color-danger) 35%, transparent);
+  border-radius: var(--radius-lg);
+  background: var(--color-danger-tint);
+}
+
+.dangerTitle {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-danger);
+}
+
+.dangerText {
+  font-size: 14px;
+  line-height: 21px;
+  color: var(--color-text);
+}
+
+.dangerButton {
+  width: auto;
+  min-width: 180px;
+}
+
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.confirmActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.confirmActions > * {
+  flex: 1 1 140px;
+}
+
+@media (max-width: 600px) {
+  .dangerZone {
+    padding: 18px;
+  }
+
+  .dangerButton {
+    width: 100%;
   }
 }

@@ -5,8 +5,8 @@ import { getFeaturedGames } from '@/lib/game-queries'
 import { loadGameList, sportFromSearchParams } from '@/lib/page-data'
 
 const GAMES_ANCHOR = 'oyunlar'
-/** Two rows of three cards before "Daha çox". */
-const HOME_PAGE_SIZE = 6
+/** One row of three cards; "Daha çox" reveals three more at a time. */
+const HOME_PAGE_SIZE = 3
 
 export default async function HomePage({
   searchParams,

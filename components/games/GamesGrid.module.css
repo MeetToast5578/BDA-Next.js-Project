@@ -23,6 +23,15 @@
   flex: 1;
 }
 
+/* "Daha çox" and "Az göstər" sit side by side, stacking when there is no room. */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+}
+
 .more {
   width: 236px;
   max-width: 100%;

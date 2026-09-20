@@ -7,7 +7,7 @@ import styles from './Header.module.css'
 import { LogoutButton } from './LogoutButton'
 import { NavLink } from './NavLink'
 
-export function Logo({ className }: { className?: string }) {
+function Logo({ className }: { className?: string }) {
   return (
     <Link href="/" className={className ?? styles.logo} aria-label="OyunaGəl — ana səhifə">
       <span className={styles.dot} aria-hidden="true" />

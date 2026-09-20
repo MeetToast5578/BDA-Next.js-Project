@@ -99,6 +99,11 @@ const bakuTime = new Intl.DateTimeFormat('az-AZ', { timeZone: BAKU_TIME_ZONE, ho
 const bakuWeekday = new Intl.DateTimeFormat('az-AZ', { timeZone: BAKU_TIME_ZONE, weekday: 'long' })
 const bakuDate = new Intl.DateTimeFormat('az-AZ', { timeZone: BAKU_TIME_ZONE, day: 'numeric', month: 'long' })
 
+/** "2026-09-19": the calendar day `date` falls on in Baku, as the date inputs want it. */
+export function formatBakuDateKey(date: Date) {
+  return bakuDayKey.format(date)
+}
+
 /** Midnight in Baku of the day containing `date`, shifted by `addDays` days. */
 export function startOfBakuDay(date: Date, addDays = 0) {
   const start = new Date(`${bakuDayKey.format(date)}T00:00:00${BAKU_UTC_OFFSET}`)
@@ -246,12 +251,15 @@ export type CreateGameInput = {
 type CreateGameParseResult = { ok: true; input: CreateGameInput } | { ok: false; code: string; message: string }
 
 /**
- * Validates the create-game form. `sport` and `level` accept the stored values or the Azerbaijani
- * labels; date and time are Baku local time; `currentCount` is "Mövcud iştirakçı sayı", the players
- * already in, so the game opens with maxCount - currentCount free spots. The host is always the first
- * player, so currentCount is at least 1.
+ * Validates the create- and edit-game forms. `sport` and `level` accept the stored values or the
+ * Azerbaijani labels; date and time are Baku local time.
+ *
+ * On create, `currentCount` is "Mövcud iştirakçı sayı", the players already in, so the game opens
+ * with maxCount - currentCount free spots, and the host is always the first player. On edit the
+ * count is not part of the form — it is whoever has joined by now — so it is passed in as
+ * `fixedCurrentCount` and the only rule left is that the new size still fits them all.
  */
-export function parseCreateGameBody(body: unknown, now = new Date()): CreateGameParseResult {
+function parseGameForm(body: unknown, now: Date, fixedCurrentCount?: number): CreateGameParseResult {
   const fail = (code: string, message: string) => ({ ok: false as const, code, message })
   const data = asDoc(body) ?? {}
 
@@ -280,10 +288,19 @@ export function parseCreateGameBody(body: unknown, now = new Date()): CreateGame
   if (!Number.isInteger(maxCount) || maxCount < MIN_MAX_PLAYERS || maxCount > sportMax || maxCount % PLAYER_COUNT_STEP !== 0) {
     return fail('INVALID_MAX_COUNT', `maxCount must be an even number from ${MIN_MAX_PLAYERS} to ${sportMax} for ${sport}.`)
   }
-  const rawCount = data.currentCount === undefined || data.currentCount === '' ? 1 : Number(data.currentCount)
-  const currentCount = Math.max(1, rawCount)
-  if (!Number.isInteger(rawCount) || rawCount < 0 || currentCount >= maxCount) {
-    return fail('INVALID_CURRENT_COUNT', 'currentCount must be an integer from 1 (the host) to maxCount - 1.')
+  let currentCount: number
+  if (fixedCurrentCount === undefined) {
+    const rawCount = data.currentCount === undefined || data.currentCount === '' ? 1 : Number(data.currentCount)
+    currentCount = Math.max(1, rawCount)
+    if (!Number.isInteger(rawCount) || rawCount < 0 || currentCount >= maxCount) {
+      return fail('INVALID_CURRENT_COUNT', 'currentCount must be an integer from 1 (the host) to maxCount - 1.')
+    }
+  } else {
+    currentCount = fixedCurrentCount
+    // Shrinking a game below the people already in it would leave them without a spot.
+    if (maxCount < currentCount) {
+      return fail('MAX_COUNT_BELOW_PLAYERS', `The game already has ${currentCount} players, so maxCount cannot be lower.`)
+    }
   }
 
   const hasPhone = data.hostPhone !== undefined && data.hostPhone !== null && data.hostPhone !== ''
@@ -295,19 +312,46 @@ export function parseCreateGameBody(body: unknown, now = new Date()): CreateGame
   return { ok: true, input: { title, sport, level, venueId, scheduledAt, maxCount, currentCount, contactPhone } }
 }
 
+export function parseCreateGameBody(body: unknown, now = new Date()) {
+  return parseGameForm(body, now)
+}
+
+/** The edit form, where `currentCount` is the players already in rather than a field the host sets. */
+export function parseEditGameBody(body: unknown, currentCount: number, now = new Date()) {
+  return parseGameForm(body, now, currentCount)
+}
+
 /** An uploaded profile picture, else the Google picture saved at sign-in. */
 export function userAvatarUrl(user: unknown) {
   const doc = asDoc(user)
   return mediaUrl(asDoc(doc?.profilePicture)?.url) ?? nonEmptyString(doc?.avatarUrl)
 }
 
+/** Full and thumbnail URLs of an uploaded media document, or null when there is no usable file. */
+function mediaSizes(value: unknown) {
+  const media = asDoc(value)
+  if (!media) return null
+  const sizes = asDoc(media.sizes)
+  const full = mediaUrl(asDoc(sizes?.full)?.url) ?? mediaUrl(media.url)
+  return full ? { full, thumbnail: mediaUrl(asDoc(sizes?.thumbnail)?.url) ?? full } : null
+}
+
+/**
+ * Cover for a game card, most specific source first: the game's own uploaded cover, then its
+ * `image` path, then the venue's photo, then the sport's default picture. The venue photo means a
+ * host who uploads nothing still gets a picture of the place they are playing, not generic stock art.
+ */
 function resolveCoverImage(game: Doc, fallbackUrl: string) {
-  const media = asDoc(game.coverImage)
-  const sizes = asDoc(media?.sizes)
-  const fullUrl =
-    mediaUrl(asDoc(sizes?.full)?.url) ?? mediaUrl(media?.url) ?? nonEmptyString(game.image) ?? fallbackUrl
-  const thumbnailUrl = mediaUrl(asDoc(sizes?.thumbnail)?.url) ?? fullUrl
-  return { thumbnailUrl, fullUrl, fallbackUrl }
+  const own = mediaSizes(game.coverImage)
+  if (own) return { thumbnailUrl: own.thumbnail, fullUrl: own.full, fallbackUrl }
+
+  const ownPath = nonEmptyString(game.image)
+  if (ownPath) return { thumbnailUrl: ownPath, fullUrl: ownPath, fallbackUrl }
+
+  const venue = mediaSizes(asDoc(game.arena)?.image)
+  if (venue) return { thumbnailUrl: venue.thumbnail, fullUrl: venue.full, fallbackUrl }
+
+  return { thumbnailUrl: fallbackUrl, fullUrl: fallbackUrl, fallbackUrl }
 }
 
 export function normalizeGameRecord(raw: unknown, now = Date.now()) {
@@ -406,6 +450,9 @@ export function rankFeatured<T extends Rankable>(games: T[], now: number, limit 
     .map(({ game }) => game)
 }
 
+/** Shared shape for the parsers below: a validated value, or an API error code and message. */
+type ParseOk<T> = { ok: true; value: T } | { ok: false; code: string; message: string }
+
 export type GameListQuery = {
   sport: string | null
   city: string
@@ -459,4 +506,89 @@ function parseDateParam(value: string | null, fallback: Date) {
 function clampInt(value: string | null, fallback: number, min: number, max: number) {
   const parsed = value === null ? Number.NaN : Number.parseInt(value, 10)
   return Number.isFinite(parsed) ? Math.min(max, Math.max(min, parsed)) : fallback
+}
+
+export const PROFILE_ROLES = ['hosting', 'joined'] as const
+export const PROFILE_WINDOWS = ['upcoming', 'past'] as const
+export type ProfileRole = (typeof PROFILE_ROLES)[number]
+export type ProfileWindow = (typeof PROFILE_WINDOWS)[number]
+
+export type MyGamesQuery = { role: ProfileRole; when: ProfileWindow; page: number; limit: number }
+
+/** Validates the "my games" list params. Defaults to the games the viewer joined, soonest first. */
+export function parseMyGamesParams(params: URLSearchParams): ParseOk<MyGamesQuery> {
+  const role = params.get('role') ?? 'joined'
+  if (!PROFILE_ROLES.includes(role as ProfileRole)) {
+    return { ok: false, code: 'INVALID_ROLE', message: `role must be one of: ${PROFILE_ROLES.join(', ')}` }
+  }
+
+  const when = params.get('when') ?? 'upcoming'
+  if (!PROFILE_WINDOWS.includes(when as ProfileWindow)) {
+    return { ok: false, code: 'INVALID_WINDOW', message: `when must be one of: ${PROFILE_WINDOWS.join(', ')}` }
+  }
+
+  return {
+    ok: true,
+    value: {
+      role: role as ProfileRole,
+      when: when as ProfileWindow,
+      page: clampInt(params.get('page'), 1, 1, Number.MAX_SAFE_INTEGER),
+      limit: clampInt(params.get('limit'), GAMES_DEFAULT_LIMIT, 1, GAMES_MAX_LIMIT),
+    },
+  }
+}
+
+export const MAX_FULL_NAME_LENGTH = 120
+
+/** Only the keys the request actually sent, so a PATCH never blanks a field it did not mention. */
+export type ProfileUpdate = {
+  fullName?: string
+  /** null clears the stored number. */
+  phone?: string | null
+  /** null removes the uploaded picture. */
+  profilePictureId?: number | null
+}
+
+/**
+ * Validates "profilimi redaktə et". Email, role and googleId are deliberately not editable: the
+ * account is a Google identity, and those three are what tie it to one.
+ */
+export function parseProfileUpdate(body: unknown): ParseOk<ProfileUpdate> {
+  const fail = (code: string, message: string) => ({ ok: false as const, code, message })
+  const data = asDoc(body)
+  if (!data) return fail('INVALID_BODY', 'A JSON object is required.')
+
+  const update: ProfileUpdate = {}
+
+  if (data.fullName !== undefined) {
+    const fullName = typeof data.fullName === 'string' ? data.fullName.trim() : ''
+    if (!fullName) return fail('INVALID_NAME', 'Ad və soyad boş ola bilməz.')
+    if (fullName.length > MAX_FULL_NAME_LENGTH) {
+      return fail('INVALID_NAME', `Ad və soyad ${MAX_FULL_NAME_LENGTH} simvoldan uzun ola bilməz.`)
+    }
+    update.fullName = fullName
+  }
+
+  if (data.phone !== undefined) {
+    if (data.phone === null || data.phone === '') {
+      update.phone = null
+    } else {
+      const phone = normalizePhone(data.phone)
+      if (!phone) return fail('INVALID_PHONE', 'Telefon nömrəsi yanlışdır, məsələn +994 50 210 34 56.')
+      update.phone = phone
+    }
+  }
+
+  if (data.profilePictureId !== undefined) {
+    if (data.profilePictureId === null || data.profilePictureId === '') {
+      update.profilePictureId = null
+    } else {
+      const id = Number(data.profilePictureId)
+      if (!Number.isSafeInteger(id) || id <= 0) return fail('INVALID_MEDIA', 'profilePictureId is not a valid upload.')
+      update.profilePictureId = id
+    }
+  }
+
+  if (Object.keys(update).length === 0) return fail('NOTHING_TO_UPDATE', 'Dəyişdiriləcək heç nə göndərilmədi.')
+  return { ok: true, value: update }
 }

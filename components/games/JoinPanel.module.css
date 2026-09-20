@@ -115,3 +115,25 @@
   line-height: 19px;
   color: var(--color-muted-alt);
 }
+
+/* "← Məlumatları dəyiş", back to step 1 of the join modal. */
+.back {
+  align-self: center;
+  padding: 4px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.back:hover:not(:disabled) {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.back:disabled {
+  opacity: 0.5;
+}

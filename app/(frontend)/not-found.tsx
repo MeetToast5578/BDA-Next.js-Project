@@ -1,6 +1,6 @@
 import Link from 'next/link'
 
-import { EmptyState } from '@/components/games/GamesGrid'
+import { EmptyState } from '@/components/games/EmptyState'
 import { buttonClass } from '@/components/ui/button'
 
 export default function NotFound() {

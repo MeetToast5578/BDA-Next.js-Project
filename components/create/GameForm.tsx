@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useId, useRef, useState } from 'react'
 
-import { ApiError, postJson } from '@/lib/api-client'
+import { apiFetch, ApiError, postJson } from '@/lib/api-client'
 import type { CreateGameRequest, CurrentUser, GameDetail, Venue } from '@/lib/api-types'
 import {
   DATE_FORMATS,
@@ -17,7 +17,8 @@ import {
 } from '@/lib/date-input'
 import {
   BAKU_UTC_OFFSET,
-  formatBakuShortDate,
+  formatBakuDateKey,
+  formatBakuTime,
   MIN_MAX_PLAYERS,
   normalizePhone,
   PLAYER_COUNT_STEP,
@@ -29,7 +30,8 @@ import { LEVEL_OPTIONS, SPORT_EMOJI, SPORT_LABELS, SPORT_ORDER } from '@/compone
 import { buttonClass } from '@/components/ui/button'
 import form from '@/components/ui/form.module.css'
 import { Icon } from '@/components/ui/Icon'
-import styles from './CreateGameForm.module.css'
+import { Modal } from '@/components/ui/Modal'
+import styles from './GameForm.module.css'
 import { VenuePicker } from './VenuePicker'
 
 type Field = 'hostPhone' | 'venue' | 'date' | 'time' | 'currentCount' | 'maxCount' | 'title'
@@ -49,8 +51,16 @@ const API_ERRORS: Record<string, { field?: Field; message: string }> = {
   INVALID_CURRENT_COUNT: { field: 'currentCount', message: CURRENT_COUNT_ERROR },
   INVALID_PHONE: { field: 'hostPhone', message: PHONE_ERROR },
   PHONE_REQUIRED: { field: 'hostPhone', message: 'Host telefon nömrəsi tələb olunur.' },
+  MAX_COUNT_BELOW_PLAYERS: { field: 'maxCount', message: 'Oyunda artıq bu qədər oyunçu var — limiti aşağı sala bilməzsiniz.' },
+  NOT_GAME_HOST: { message: 'Yalnız oyunun hostu bu oyunu dəyişə bilər.' },
+  GAME_NOT_FOUND: { message: 'Oyun tapılmadı.' },
   INVALID_SPORT: { message: 'İdman növünü seçin.' },
   INVALID_LEVEL: { message: 'Oyun səviyyəsini seçin.' },
+}
+
+/** Smallest legal "maksimum" for a game: even, and never below the players already in it. */
+function minMaxFor(currentCount: number) {
+  return Math.max(MIN_MAX_PLAYERS, Math.ceil(currentCount / PLAYER_COUNT_STEP) * PLAYER_COUNT_STEP)
 }
 
 function venueOffers(venue: Venue, sport: string) {
@@ -117,28 +127,46 @@ function openPicker(input: HTMLInputElement | null) {
 }
 
 /**
- * "Yeni Oyun Yarat" with the live "Seçimlərin xülasəsi" panel. All form state lives here, so the
- * summary always shows exactly what will be submitted.
+ * "Yeni Oyun Yarat": a single column of full-width cards with "Oyunu dərc et" underneath.
+ * All form state lives here, so sport and level selection have one source of truth.
  */
-export function CreateGameForm({ user, today, initialSport }: { user: CurrentUser; today: string; initialSport?: string }) {
+export function GameForm({
+  user,
+  today,
+  initialSport,
+  game,
+}: {
+  user: CurrentUser
+  today: string
+  initialSport?: string
+  /** Set to edit that game instead of creating one. Only its host ever gets this far. */
+  game?: GameDetail
+}) {
+  const editing = game !== undefined
   const router = useRouter()
   const baseId = useId()
   const ids = Object.fromEntries(
-    ['name', 'phone', 'date', 'time', 'current', 'max', 'title', 'venue', 'summary', 'incomplete'].map((key) => [
+    ['name', 'phone', 'date', 'time', 'current', 'max', 'title', 'venue', 'incomplete'].map((key) => [
       key,
       `${baseId}-${key}`,
     ]),
-  ) as Record<'name' | 'phone' | 'date' | 'time' | 'current' | 'max' | 'title' | 'venue' | 'summary' | 'incomplete', string>
+  ) as Record<'name' | 'phone' | 'date' | 'time' | 'current' | 'max' | 'title' | 'venue' | 'incomplete', string>
 
-  const [sport, setSport] = useState(initialSport && SPORT_ORDER.includes(initialSport) ? initialSport : 'football')
-  const [level, setLevel] = useState('medium')
-  const [venue, setVenue] = useState<Venue | null>(null)
+  const [sport, setSport] = useState(
+    game?.sport ?? (initialSport && SPORT_ORDER.includes(initialSport) ? initialSport : 'football'),
+  )
+  const [level, setLevel] = useState(game?.level ?? 'medium')
+  const [venue, setVenue] = useState<Venue | null>(game?.venue ?? null)
   // Date and time are kept as typed; the API values ("2026-09-19", "19:30") are derived from the text
   // and the chosen format, so switching format or picking from the calendar just rewrites the text.
   const [dateFormat, setDateFormat] = useState<DateFormat>('dd.mm.yyyy')
-  const [dateText, setDateText] = useState(() => formatDateText(today, 'dd.mm.yyyy'))
+  const [dateText, setDateText] = useState(() =>
+    formatDateText(game?.startsAt ? formatBakuDateKey(new Date(game.startsAt)) : today, 'dd.mm.yyyy'),
+  )
   const [timeFormat, setTimeFormat] = useState<TimeFormat>('24h')
-  const [timeText, setTimeText] = useState('')
+  const [timeText, setTimeText] = useState(() =>
+    game?.startsAt ? formatTimeText(formatBakuTime(game.startsAt) ?? '', '24h') : '',
+  )
   const date = parseDateText(dateText, dateFormat) ?? ''
   const time = parseTimeText(timeText, timeFormat) ?? ''
   const datePicker = useRef<HTMLInputElement>(null)
@@ -146,16 +174,21 @@ export function CreateGameForm({ user, today, initialSport }: { user: CurrentUse
   // The host is the first player, so at least one spot is taken.
   // Both counts are set with − / + steppers only, so they are always in range: current from 1 to
   // maxCount − 1, max even and within the sport's limit.
-  const [currentCount, setCurrentCount] = useState(1)
-  const [maxCount, setMaxCount] = useState(() => SPORT_META[sport].maxPlayers)
+  // When editing, the count is whoever has joined by now and is not the host's to set.
+  const [currentCount, setCurrentCount] = useState(game?.currentCount ?? 1)
+  const [maxCount, setMaxCount] = useState(() => game?.maxCount ?? SPORT_META[sport].maxPlayers)
   const sportMax = SPORT_META[sport].maxPlayers
+  const minMaxCount = editing ? minMaxFor(currentCount) : MIN_MAX_PLAYERS
   // Only the digits after the fixed +994 prefix, formatted as "77 538 60 04".
-  const [hostPhone, setHostPhone] = useState(formatLocalPhone(user.phoneNumber ?? ''))
-  const [title, setTitle] = useState('')
+  const [hostPhone, setHostPhone] = useState(formatLocalPhone(game?.host.phone ?? user.phoneNumber ?? ''))
+  const [title, setTitle] = useState(game?.title ?? '')
 
   const [errors, setErrors] = useState<Errors>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   // "Oyunu dərc et" stays disabled until every required field has a value; formats are checked on submit.
   const complete = Boolean(hostPhone.trim() && venue && dateText.trim() && timeText.trim())
@@ -170,8 +203,9 @@ export function CreateGameForm({ user, today, initialSport }: { user: CurrentUse
 
   /** "Mövcud iştirakçı sayı" follows the max down when it would no longer leave a free spot. */
   function changeMaxCount(next: number) {
-    setMaxCount(next)
-    setCurrentCount((current) => Math.min(current, next - 1))
+    setMaxCount(editing ? Math.max(next, minMaxFor(currentCount)) : next)
+    // While editing, who is in the game is fixed; only the free spots move.
+    if (!editing) setCurrentCount((current) => Math.min(current, next - 1))
     setErrors((current) => ({ ...current, maxCount: undefined, currentCount: undefined }))
   }
 
@@ -252,18 +286,40 @@ export function CreateGameForm({ user, today, initialSport }: { user: CurrentUse
 
     setPending(true)
     try {
-      const { game } = await postJson<{ game: GameDetail }>('/api/v1/games', body)
-      router.push(`/games/${game.id}`)
+      const saved = editing
+        ? await apiFetch<{ game: GameDetail }>(`/api/v1/games/${game.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(body),
+          })
+        : await postJson<{ game: GameDetail }>('/api/v1/games', body)
+      router.push(`/games/${saved.game.id}`)
       router.refresh()
     } catch (err) {
       setPending(false)
       if (err instanceof ApiError && err.code === 'UNAUTHENTICATED') {
-        router.push(loginHref('/games/new'))
+        router.push(loginHref(editing ? `/games/${game.id}/edit` : '/games/new'))
         return
       }
       const known = err instanceof ApiError ? API_ERRORS[err.code] : undefined
+      const fallback = editing ? 'Oyunu yeniləmək mümkün olmadı.' : 'Oyun yaratmaq mümkün olmadı.'
       if (known?.field) setErrors({ [known.field]: known.message })
-      else setFormError(known?.message ?? (err instanceof Error ? err.message : 'Oyun yaratmaq mümkün olmadı.'))
+      else setFormError(known?.message ?? (err instanceof Error ? err.message : fallback))
+    }
+  }
+
+  async function remove() {
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      await apiFetch(`/api/v1/games/${game!.id}`, { method: 'DELETE' })
+      setConfirmOpen(false)
+      // Back to the homepage: the game this page was editing no longer exists.
+      router.replace('/')
+      router.refresh()
+    } catch (err) {
+      setDeleting(false)
+      const known = err instanceof ApiError ? API_ERRORS[err.code] : undefined
+      setDeleteError(known?.message ?? (err instanceof Error ? err.message : 'Oyunu silmək mümkün olmadı.'))
     }
   }
 
@@ -282,24 +338,8 @@ export function CreateGameForm({ user, today, initialSport }: { user: CurrentUse
       </p>
     ) : null
 
-  const summary = [
-    { label: 'İdman növü', value: SPORT_LABELS[sport], placeholder: 'İdman növü seçilməyib' },
-    { label: 'Meydança', value: venue?.name, placeholder: 'Meydança seçilməyib' },
-    {
-      label: 'Tarix',
-      value: date ? formatBakuShortDate(`${date}T12:00:00${BAKU_UTC_OFFSET}`) : null,
-      placeholder: 'Tarix seçilməyib',
-    },
-    { label: 'Vaxt', value: time ? formatTimeText(time, timeFormat) : null, placeholder: 'Vaxt seçilməyib' },
-    { label: 'Maksimum iştirakçı', value: `${maxCount} nəfər`, placeholder: '' },
-    {
-      label: 'Səviyyə',
-      value: LEVEL_OPTIONS.find((option) => option.value === level)?.label,
-      placeholder: 'Səviyyə seçilməyib',
-    },
-  ]
 
-  return (
+  const formBody = (
     <form className={styles.form} onSubmit={submit} noValidate>
       <div className={styles.main}>
         <section className={styles.section} aria-labelledby="host-section">
@@ -501,23 +541,39 @@ export function CreateGameForm({ user, today, initialSport }: { user: CurrentUse
               <label htmlFor={ids.current} className={form.labelSmall}>
                 Mövcud iştirakçı sayı
               </label>
-              {/* From 1 (the host) up to one below the max, so at least one spot stays free. */}
-              <Stepper
-                id={ids.current}
-                value={currentCount}
-                min={1}
-                max={maxCount - 1}
-                step={1}
-                onChange={(next) => {
-                  setCurrentCount(next)
-                  setErrors((current) => ({ ...current, currentCount: undefined }))
-                }}
-                describedBy={[`${ids.current}-hint`, describe('currentCount', ids.current)].filter(Boolean).join(' ')}
-              />
-              <p id={`${ids.current}-hint`} className={form.hint}>
-                Siz də daxil olmaqla
-              </p>
-              {fieldError('currentCount', ids.current)}
+              {editing ? (
+                <>
+                  {/* Who is in the game is decided by who joined, not by the host editing a number. */}
+                  <output id={ids.current} className={styles.readOnlyCount}>
+                    {currentCount}
+                  </output>
+                  <p id={`${ids.current}-hint`} className={form.hint}>
+                    Qoşulan oyunçular · dəyişdirilə bilməz
+                  </p>
+                </>
+              ) : (
+                <>
+                  {/* From 1 (the host) up to one below the max, so at least one spot stays free. */}
+                  <Stepper
+                    id={ids.current}
+                    value={currentCount}
+                    min={1}
+                    max={maxCount - 1}
+                    step={1}
+                    onChange={(next) => {
+                      setCurrentCount(next)
+                      setErrors((current) => ({ ...current, currentCount: undefined }))
+                    }}
+                    describedBy={[`${ids.current}-hint`, describe('currentCount', ids.current)]
+                      .filter(Boolean)
+                      .join(' ')}
+                  />
+                  <p id={`${ids.current}-hint`} className={form.hint}>
+                    Siz də daxil olmaqla
+                  </p>
+                  {fieldError('currentCount', ids.current)}
+                </>
+              )}
             </div>
             <div className={form.field}>
               <label htmlFor={ids.max} className={form.labelSmall}>
@@ -527,7 +583,7 @@ export function CreateGameForm({ user, today, initialSport }: { user: CurrentUse
               <Stepper
                 id={ids.max}
                 value={maxCount}
-                min={MIN_MAX_PLAYERS}
+                min={minMaxCount}
                 max={sportMax}
                 step={PLAYER_COUNT_STEP}
                 onChange={changeMaxCount}
@@ -535,6 +591,7 @@ export function CreateGameForm({ user, today, initialSport }: { user: CurrentUse
               />
               <p id={`${ids.max}-hint`} className={form.hint}>
                 Hər tərəfdə {maxCount / 2} nəfər · {SPORT_LABELS[sport]} üçün maksimum {sportMax}
+                {editing ? ` · ən az ${minMaxCount} (qoşulanlar)` : ''}
               </p>
               {fieldError('maxCount', ids.max)}
             </div>
@@ -576,19 +633,7 @@ export function CreateGameForm({ user, today, initialSport }: { user: CurrentUse
         </section>
       </div>
 
-      <aside className={styles.summary} aria-labelledby={ids.summary}>
-        <h2 id={ids.summary} className={styles.sectionTitle}>
-          Seçimlərin xülasəsi
-        </h2>
-        <dl className={styles.summaryList}>
-          {summary.map(({ label, value, placeholder }) => (
-            <div key={label} className={styles.summaryRow}>
-              <dt>{label}</dt>
-              <dd className={value ? undefined : styles.summaryEmpty}>{value || placeholder}</dd>
-            </div>
-          ))}
-        </dl>
-
+      <div className={styles.submit}>
         {formError && (
           <p className={form.alert} role="alert">
             {formError}
@@ -606,14 +651,96 @@ export function CreateGameForm({ user, today, initialSport }: { user: CurrentUse
           aria-busy={pending}
           aria-describedby={complete ? undefined : ids.incomplete}
         >
-          {pending ? 'Dərc olunur…' : 'Oyunu dərc et'}
+          {editing
+            ? pending
+              ? 'Yadda saxlanılır…'
+              : 'Dəyişiklikləri yadda saxla'
+            : pending
+              ? 'Dərc olunur…'
+              : 'Oyunu dərc et'}
         </button>
         {!complete && (
           <p id={ids.incomplete} className={form.hint}>
-            Dərc etmək üçün bütün məcburi xanaları doldurun.
+            {editing
+              ? 'Yadda saxlamaq üçün bütün məcburi xanaları doldurun.'
+              : 'Dərc etmək üçün bütün məcburi xanaları doldurun.'}
           </p>
         )}
-      </aside>
+      </div>
     </form>
+  )
+
+  if (!editing) return formBody
+
+  return (
+    <>
+      {formBody}
+      <section className={styles.dangerZone} aria-labelledby="danger-zone">
+        <h2 id="danger-zone" className={styles.dangerTitle}>
+          Oyunu sil
+        </h2>
+        <p className={styles.dangerText}>
+          Oyun birdəfəlik silinir və qoşulan {game.currentCount} oyunçu yerini itirir. Bu əməliyyat geri qaytarıla
+          bilməz.
+        </p>
+        {deleteError && !confirmOpen && (
+          <p className={form.alert} role="alert">
+            {deleteError}
+          </p>
+        )}
+        <button
+          type="button"
+          className={buttonClass('danger', 'lg', { className: styles.dangerButton })}
+          onClick={() => {
+            setDeleteError(null)
+            setConfirmOpen(true)
+          }}
+          aria-haspopup="dialog"
+        >
+          Oyunu sil
+        </button>
+      </section>
+
+      <Modal
+        open={confirmOpen}
+        onClose={() => {
+          if (!deleting) setConfirmOpen(false)
+        }}
+        title="Oyunu silmək istəyirsiniz?"
+      >
+        <div className={styles.confirm}>
+          <p className={styles.dangerText}>
+            <strong>{game.title}</strong> silinəcək və qoşulan {game.currentCount} oyunçu yerini itirəcək. Bu
+            əməliyyat geri qaytarıla bilməz.
+          </p>
+          {deleteError && (
+            <p className={form.alert} role="alert">
+              {deleteError}
+            </p>
+          )}
+          <div className={styles.confirmActions}>
+            {/* Focus starts on the way out, so Enter never deletes a game by accident. */}
+            <button
+              type="button"
+              className={buttonClass('muted', 'lg')}
+              onClick={() => setConfirmOpen(false)}
+              disabled={deleting}
+              data-autofocus
+            >
+              İmtina et
+            </button>
+            <button
+              type="button"
+              className={buttonClass('danger', 'lg')}
+              onClick={remove}
+              disabled={deleting}
+              aria-busy={deleting}
+            >
+              {deleting ? 'Silinir…' : 'Bəli, sil'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+    </>
   )
 }

@@ -12,7 +12,10 @@ import {
   normalizePhone,
   parseCoordinates,
   parseCreateGameBody,
+  parseEditGameBody,
   parseGameListParams,
+  parseMyGamesParams,
+  parseProfileUpdate,
   rankFeatured,
   startOfBakuDay,
   toGameCard,
@@ -409,6 +412,107 @@ describe('parseCreateGameBody', () => {
   })
 })
 
+describe('parseEditGameBody', () => {
+  // Same form as create, minus the participant count: on edit that is whoever has joined.
+  const form = {
+    sport: 'Futbol',
+    level: 'Orta',
+    venueId: '3',
+    scheduledDate: '2026-09-14',
+    scheduledTime: '19:00',
+    maxCount: '10',
+    hostPhone: '+994 50 210 34 56',
+  }
+  const parse = (currentCount: number, overrides: Record<string, unknown> = {}) =>
+    parseEditGameBody({ ...form, ...overrides }, currentCount, new Date(NOW))
+
+  it('keeps the players already in rather than reading a count from the form', () => {
+    const result = parse(4, { currentCount: '1' })
+    expect(result.ok).toBe(true)
+    expect(result.ok && result.input.currentCount).toBe(4)
+    expect(result.ok && result.input.maxCount).toBe(10)
+  })
+
+  it('allows resizing down to exactly the players already in', () => {
+    const result = parse(10, { maxCount: '10' })
+    expect(result.ok).toBe(true)
+  })
+
+  it('refuses a size below the players already in', () => {
+    const result = parse(8, { maxCount: '6' })
+    expect(result).toMatchObject({ ok: false, code: 'MAX_COUNT_BELOW_PLAYERS' })
+  })
+
+  it('still refuses a past date and a sport the size does not fit', () => {
+    expect(parse(2, { scheduledDate: '2026-09-12' })).toMatchObject({ ok: false, code: 'DATE_IN_PAST' })
+    // Tennis tops out at 4 players, so a 10-player game cannot become tennis.
+    expect(parse(2, { sport: 'Tennis' })).toMatchObject({ ok: false, code: 'INVALID_MAX_COUNT' })
+  })
+})
+
+describe('parseMyGamesParams', () => {
+  const parse = (query: string) => parseMyGamesParams(new URLSearchParams(query))
+
+  it('defaults to the upcoming games the viewer joined', () => {
+    expect(parse('')).toEqual({ ok: true, value: { role: 'joined', when: 'upcoming', page: 1, limit: 12 } })
+  })
+
+  it('accepts hosting and past', () => {
+    const result = parse('role=hosting&when=past&page=3&limit=5')
+    expect(result).toMatchObject({ ok: true, value: { role: 'hosting', when: 'past', page: 3, limit: 5 } })
+  })
+
+  it('rejects an unknown role or window', () => {
+    expect(parse('role=everything')).toMatchObject({ ok: false, code: 'INVALID_ROLE' })
+    expect(parse('when=someday')).toMatchObject({ ok: false, code: 'INVALID_WINDOW' })
+  })
+
+  it('clamps the page size to the shared list limits', () => {
+    expect(parse('limit=9999')).toMatchObject({ ok: true, value: { limit: 50 } })
+    expect(parse('limit=0&page=-4')).toMatchObject({ ok: true, value: { limit: 1, page: 1 } })
+  })
+})
+
+describe('parseProfileUpdate', () => {
+  it('normalizes the phone the same way the rest of the app does', () => {
+    expect(parseProfileUpdate({ phone: '050 210 34 56' })).toEqual({
+      ok: true,
+      value: { phone: '+994502103456' },
+    })
+  })
+
+  it('only carries the keys that were sent, so a patch never blanks a field', () => {
+    expect(parseProfileUpdate({ fullName: '  Kərim Məmmədov  ' })).toEqual({
+      ok: true,
+      value: { fullName: 'Kərim Məmmədov' },
+    })
+  })
+
+  it('treats null and empty string as "clear this field"', () => {
+    expect(parseProfileUpdate({ phone: null })).toEqual({ ok: true, value: { phone: null } })
+    expect(parseProfileUpdate({ profilePictureId: '' })).toEqual({ ok: true, value: { profilePictureId: null } })
+  })
+
+  it('refuses an empty name, a bad number and a bad upload id', () => {
+    expect(parseProfileUpdate({ fullName: '   ' })).toMatchObject({ ok: false, code: 'INVALID_NAME' })
+    expect(parseProfileUpdate({ fullName: 'x'.repeat(121) })).toMatchObject({ ok: false, code: 'INVALID_NAME' })
+    expect(parseProfileUpdate({ phone: '12345' })).toMatchObject({ ok: false, code: 'INVALID_PHONE' })
+    expect(parseProfileUpdate({ profilePictureId: -3 })).toMatchObject({ ok: false, code: 'INVALID_MEDIA' })
+  })
+
+  it('ignores fields that are not the user\'s to change', () => {
+    // email, role and googleId tie the account to its Google identity.
+    expect(parseProfileUpdate({ email: 'new@example.com', role: 'admin', googleId: 'x' })).toMatchObject({
+      ok: false,
+      code: 'NOTHING_TO_UPDATE',
+    })
+  })
+
+  it('rejects a body that is not an object', () => {
+    expect(parseProfileUpdate(null)).toMatchObject({ ok: false, code: 'INVALID_BODY' })
+  })
+})
+
 describe('normalizeGameRecord / toGameCard', () => {
   const raw = {
     id: 7,
@@ -484,5 +588,46 @@ describe('normalizeGameRecord / toGameCard', () => {
       fullUrl: 'https://cdn.example.com/api/media/file/court-1600x900.webp',
       fallbackUrl: '/images/game-tennis-1-3ee73d.png',
     })
+  })
+
+  const venuePhoto = {
+    url: '/api/media/file/inter.jpg',
+    sizes: {
+      thumbnail: { url: '/api/media/file/inter-480x270.webp' },
+      full: { url: '/api/media/file/inter-1600x900.webp' },
+    },
+  }
+
+  it('falls back to the venue photo when the game has no cover of its own', () => {
+    const game = normalizeGameRecord({ ...raw, arena: { ...raw.arena, image: venuePhoto } }, NOW)
+    expect(game.cover).toEqual({
+      thumbnailUrl: '/api/media/file/inter-480x270.webp',
+      fullUrl: '/api/media/file/inter-1600x900.webp',
+      // Still the sport default, so a venue photo that 404s degrades to it.
+      fallbackUrl: '/images/game-football-1-7880cc.png',
+    })
+  })
+
+  it("prefers the game's own cover over the venue photo", () => {
+    const game = normalizeGameRecord({
+      ...raw,
+      arena: { ...raw.arena, image: venuePhoto },
+      coverImage: { url: '/api/media/file/own.jpg' },
+    }, NOW)
+    expect(game.cover.fullUrl).toBe('/api/media/file/own.jpg')
+  })
+
+  it("prefers the game's own image path over the venue photo", () => {
+    const game = normalizeGameRecord({
+      ...raw,
+      arena: { ...raw.arena, image: venuePhoto },
+      image: '/images/custom.png',
+    }, NOW)
+    expect(game.cover.fullUrl).toBe('/images/custom.png')
+  })
+
+  it('ignores a venue photo that has no file and uses the sport default', () => {
+    const game = normalizeGameRecord({ ...raw, arena: { ...raw.arena, image: { alt: 'no file yet' } } }, NOW)
+    expect(game.cover.fullUrl).toBe('/images/game-football-1-7880cc.png')
   })
 })

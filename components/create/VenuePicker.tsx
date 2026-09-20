@@ -6,7 +6,7 @@ import { apiFetch, withQuery } from '@/lib/api-client'
 import type { Venue } from '@/lib/api-types'
 import { foldForSearch } from '@/lib/game-backend'
 import form from '@/components/ui/form.module.css'
-import styles from './CreateGameForm.module.css'
+import styles from './GameForm.module.css'
 
 type VenueLists = Record<string, Venue[] | 'error'>
 

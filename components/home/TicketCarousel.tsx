@@ -164,6 +164,10 @@ export function TicketCarousel({ games }: { games: FeaturedGame[] }) {
         <ul ref={trackRef} className={styles.track} tabIndex={0} aria-label="Oyunlar, sürüşdürün">
           {Array.from({ length: games.length * (loops ? COPIES : 1) }, (_, index) => {
             // The buffer copies are decoration: hidden from screen readers and skipped by Tab.
+            // They must still take a click, though. `inert` would have been the tidy way to do both,
+            // but it kills pointer events too, and a buffer card is pixel-identical to the real one:
+            // the track renders at scroll position 0 (a buffer card, dead centre) until hydration
+            // moves it, and any scroll can settle on one. Cards that look clickable have to be.
             const clone = index < offset || index >= offset + games.length
             return (
               <li
@@ -172,9 +176,8 @@ export function TicketCarousel({ games }: { games: FeaturedGame[] }) {
                 aria-roledescription={clone ? undefined : 'slayd'}
                 aria-label={clone ? undefined : `${(index % games.length) + 1} / ${games.length}`}
                 aria-hidden={clone || undefined}
-                inert={clone || undefined}
               >
-                <Ticket game={games[index % games.length]} />
+                <Ticket game={games[index % games.length]} clone={clone} />
               </li>
             )
           })}
@@ -209,8 +212,11 @@ export function TicketCarousel({ games }: { games: FeaturedGame[] }) {
 }
 
 /** Memoised: the carousel re-renders whenever the centred card changes, mid-swipe. */
-const Ticket = memo(function Ticket({ game }: { game: FeaturedGame }) {
+const Ticket = memo(function Ticket({ game, clone }: { game: FeaturedGame; clone: boolean }) {
   const href = `/games/${game.id}`
+  // A buffer copy still takes a click, but it is not a second Tab stop for the same game, and its
+  // `aria-hidden` wrapper must not contain anything focusable.
+  const tabIndex = clone ? -1 : undefined
   const place = [game.venue.name, [game.venue.district, game.venue.cityLabel].filter(Boolean).join(', ')]
     .filter(Boolean)
     .join(' · ')
@@ -229,7 +235,9 @@ const Ticket = memo(function Ticket({ game }: { game: FeaturedGame }) {
         <div className={styles.info}>
           <div className={styles.meta}>
             <h3 className={styles.ticketTitle}>
-              <Link href={href}>{game.title}</Link>
+              <Link href={href} tabIndex={tabIndex}>
+                {game.title}
+              </Link>
             </h3>
             <p className={styles.ticketSub}>{[place, game.levelLabel].filter(Boolean).join(' · ')}</p>
           </div>
@@ -260,6 +268,7 @@ const Ticket = memo(function Ticket({ game }: { game: FeaturedGame }) {
             href={`${href}?join=1`}
             className={buttonClass('white', 'md', { className: styles.join })}
             aria-label={`${game.title} oyununa qoşul`}
+            tabIndex={tabIndex}
           >
             Qoşul
           </Link>

@@ -1,5 +1,4 @@
 import { postgresAdapter } from "@payloadcms/db-postgres";
-import { lexicalEditor } from "@payloadcms/richtext-lexical";
 import path from "path";
 import { buildConfig } from "payload";
 import { fileURLToPath } from "url";
@@ -24,7 +23,8 @@ export default buildConfig({
     },
   },
   collections: [Users, Media, Arena, Teams, Games, GameParticipants, JoinAttempts],
-  editor: lexicalEditor(),
+  // Nothing in the app queries GraphQL; the REST API under /api/v1 is the only data surface.
+  graphQL: { disable: true },
   secret: process.env.PAYLOAD_SECRET || "",
   typescript: {
     outputFile: path.resolve(dirname, "payload-types.ts"),

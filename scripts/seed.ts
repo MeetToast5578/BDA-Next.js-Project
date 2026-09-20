@@ -113,21 +113,20 @@ const VENUES: Array<{
   address: string
   coordinates: string
   sportTypes: Sport[]
-  capacity: number
   description: string
 }> = [
-  { name: 'Inter Arena', district: 'Nərimanov', address: 'Ağa Nemətulla küç. 12', coordinates: '40.4093,49.8671', sportTypes: ['football', 'basketball', 'tennis'], capacity: 24, description: 'Süni örtüklü açıq meydança, işıqlandırma və soyunub-geyinmə otaqları ilə.' },
-  { name: 'Aku Arena', district: 'Nizami', address: 'Qara Qarayev pr. 41', coordinates: '40.4021,49.9245', sportTypes: ['football'], capacity: 20, description: 'İki ədəd 5-ə-5 mini-futbol meydançası.' },
-  { name: '707 Stadium', district: 'Xətai', address: 'Babək pr. 74', coordinates: '40.3856,49.9012', sportTypes: ['football'], capacity: 22, description: 'Tribunalı örtülü stadion, gecə saatlarında da açıqdır.' },
-  { name: 'Sahil Sport Mərkəzi', district: 'Səbail', address: 'Neftçilər pr. 18', coordinates: '40.3721,49.8402', sportTypes: ['basketball', 'tennis'], capacity: 16, description: 'Dənizkənarı parkda yerləşən açıq basketbol və tennis kortları.' },
-  { name: 'Yasamal Idman Kompleksi', district: 'Yasamal', address: 'Şərifzadə küç. 203', coordinates: '40.3948,49.8134', sportTypes: ['football', 'basketball'], capacity: 26, description: 'Bələdiyyə idman kompleksi, qapalı zal və açıq meydança.' },
-  { name: 'Binəqədi Futbol Parkı', district: 'Binəqədi', address: 'Ə. Naxçıvani küç. 55', coordinates: '40.4587,49.8213', sportTypes: ['football'], capacity: 22, description: 'Üç açıq meydança və avtomobil dayanacağı.' },
-  { name: 'Nəsimi Arena', district: 'Nəsimi', address: 'Azadlıq pr. 132', coordinates: '40.4012,49.8478', sportTypes: ['football', 'basketball'], capacity: 20, description: 'Şəhər mərkəzinə yaxın, metroya 5 dəqiqəlik məsafədə.' },
-  { name: 'Xəzər Tennis Klubu', district: 'Xəzər', address: 'Şüvəlan qəs., Sahil küç. 9', coordinates: '40.4712,50.1583', sportTypes: ['tennis'], capacity: 8, description: 'Dörd torpaq kort, məşqçi dəstəyi ilə.' },
-  { name: 'Sabunçu İdman Meydanı', district: 'Sabunçu', address: 'Bakıxanov qəs., Həzi Aslanov küç. 3', coordinates: '40.4359,49.9471', sportTypes: ['football', 'basketball'], capacity: 24, description: 'Məhəllə idman meydanı, həftəsonları daha sıx olur.' },
-  { name: 'Qaradağ Sport Hub', district: 'Qaradağ', address: 'Səngəçal qəs., Sahil yolu 2', coordinates: '40.2064,49.4531', sportTypes: ['football', 'tennis'], capacity: 18, description: 'Şəhərdən kənarda, geniş dayanacaqlı yeni kompleks.' },
-  { name: 'Suraxanı Basket Zalı', district: 'Suraxanı', address: 'Hövsan qəs., Nizami küç. 27', coordinates: '40.4148,50.0074', sportTypes: ['basketball'], capacity: 12, description: 'Qapalı parket zal, il boyu istifadəyə uyğundur.' },
-  { name: 'Dərnəgül Mini Futbol', district: 'Binəqədi', address: 'Dərnəgül şosesi 91', coordinates: '40.4423,49.8356', sportTypes: ['football'], capacity: 14, description: 'Kiçik ölçülü iki meydança, sürətli oyunlar üçün.' },
+  { name: 'Inter Arena', district: 'Nərimanov', address: 'Ağa Nemətulla küç. 12', coordinates: '40.4093,49.8671', sportTypes: ['football', 'basketball', 'tennis'], description: 'Süni örtüklü açıq meydança, işıqlandırma və soyunub-geyinmə otaqları ilə.' },
+  { name: 'Aku Arena', district: 'Nizami', address: 'Qara Qarayev pr. 41', coordinates: '40.4021,49.9245', sportTypes: ['football'], description: 'İki ədəd 5-ə-5 mini-futbol meydançası.' },
+  { name: '707 Stadium', district: 'Xətai', address: 'Babək pr. 74', coordinates: '40.3856,49.9012', sportTypes: ['football'], description: 'Tribunalı örtülü stadion, gecə saatlarında da açıqdır.' },
+  { name: 'Sahil Sport Mərkəzi', district: 'Səbail', address: 'Neftçilər pr. 18', coordinates: '40.3721,49.8402', sportTypes: ['basketball', 'tennis'], description: 'Dənizkənarı parkda yerləşən açıq basketbol və tennis kortları.' },
+  { name: 'Yasamal Idman Kompleksi', district: 'Yasamal', address: 'Şərifzadə küç. 203', coordinates: '40.3948,49.8134', sportTypes: ['football', 'basketball'], description: 'Bələdiyyə idman kompleksi, qapalı zal və açıq meydança.' },
+  { name: 'Binəqədi Futbol Parkı', district: 'Binəqədi', address: 'Ə. Naxçıvani küç. 55', coordinates: '40.4587,49.8213', sportTypes: ['football'], description: 'Üç açıq meydança və avtomobil dayanacağı.' },
+  { name: 'Nəsimi Arena', district: 'Nəsimi', address: 'Azadlıq pr. 132', coordinates: '40.4012,49.8478', sportTypes: ['football', 'basketball'], description: 'Şəhər mərkəzinə yaxın, metroya 5 dəqiqəlik məsafədə.' },
+  { name: 'Xəzər Tennis Klubu', district: 'Xəzər', address: 'Şüvəlan qəs., Sahil küç. 9', coordinates: '40.4712,50.1583', sportTypes: ['tennis'], description: 'Dörd torpaq kort, məşqçi dəstəyi ilə.' },
+  { name: 'Sabunçu İdman Meydanı', district: 'Sabunçu', address: 'Bakıxanov qəs., Həzi Aslanov küç. 3', coordinates: '40.4359,49.9471', sportTypes: ['football', 'basketball'], description: 'Məhəllə idman meydanı, həftəsonları daha sıx olur.' },
+  { name: 'Qaradağ Sport Hub', district: 'Qaradağ', address: 'Səngəçal qəs., Sahil yolu 2', coordinates: '40.2064,49.4531', sportTypes: ['football', 'tennis'], description: 'Şəhərdən kənarda, geniş dayanacaqlı yeni kompleks.' },
+  { name: 'Suraxanı Basket Zalı', district: 'Suraxanı', address: 'Hövsan qəs., Nizami küç. 27', coordinates: '40.4148,50.0074', sportTypes: ['basketball'], description: 'Qapalı parket zal, il boyu istifadəyə uyğundur.' },
+  { name: 'Dərnəgül Mini Futbol', district: 'Binəqədi', address: 'Dərnəgül şosesi 91', coordinates: '40.4423,49.8356', sportTypes: ['football'], description: 'Kiçik ölçülü iki meydança, sürətli oyunlar üçün.' },
 ]
 
 // ---------------------------------------------------------------------------- teams
@@ -319,7 +318,6 @@ for (const venue of VENUES) {
       address: venue.address,
       coordinates: venue.coordinates,
       sportTypes: venue.sportTypes,
-      capacity: venue.capacity,
       description: venue.description,
     },
   })

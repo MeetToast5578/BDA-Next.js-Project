@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { cache } from 'react'
 
@@ -7,6 +8,7 @@ import { BackLink } from '@/components/games/BackLink'
 import { CoverImage } from '@/components/games/CoverImage'
 import styles from '@/components/games/GameDetail.module.css'
 import { JoinPanel } from '@/components/games/JoinPanel'
+import { buttonClass } from '@/components/ui/button'
 import { Icon } from '@/components/ui/Icon'
 import { getGameDetail } from '@/lib/game-queries'
 import { formatPhone } from '@/lib/phone'
@@ -152,6 +154,12 @@ export default async function GameDetailPage({ params, searchParams }: Props) {
               <p className={styles.hostNote}>Oyunu yaradıb · Əlaqə oyuna qoşulduqdan sonra görünür</p>
             )}
           </section>
+
+          {game.viewer.isHost && (
+            <Link href={`/games/${game.id}/edit`} className={buttonClass('outlinePrimary', 'lg', { block: true })}>
+              Oyunu redaktə et
+            </Link>
+          )}
 
           <JoinPanel game={game} user={user} autoOpen={wantsToJoin && canJoin} />
         </aside>

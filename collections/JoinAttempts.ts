@@ -11,11 +11,17 @@ export const JOIN_OUTCOMES = [
   'UNAUTHENTICATED',
   'INVALID_REQUEST',
   'ERROR',
+  // Leaving is logged here too: a log that counted joins but not leaves would read as if everyone
+  // who ever joined were still in the game.
+  'LEFT',
+  'NOT_JOINED',
+  'HOST_CANNOT_LEAVE',
+  'GAME_STARTED',
 ] as const
 
 export type JoinOutcome = (typeof JOIN_OUTCOMES)[number]
 
-/** Audit log of every join request, successful or not. Append-only; written by the join endpoint. */
+/** Audit log of every join and leave request, successful or not. Append-only; written by those endpoints. */
 export const JoinAttempts: CollectionConfig = {
   slug: 'join-attempts',
   access: {

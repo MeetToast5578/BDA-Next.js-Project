@@ -216,8 +216,11 @@ export interface Arena {
    * Latitude and longitude separated by a comma, for example 40.3755,49.8335.
    */
   coordinates?: string | null;
+  /**
+   * Photo of the venue. Games here use it as their cover unless they set one of their own.
+   */
+  image?: (number | null) | Media;
   sportTypes?: ('football' | 'basketball' | 'tennis')[] | null;
-  capacity: number;
   description?: string | null;
   updatedAt: string;
   createdAt: string;
@@ -280,6 +283,10 @@ export interface GameParticipant {
   game: number | Game;
   user: number | User;
   /**
+   * Name the player gave in step 1 of the join form; shown in the participant list.
+   */
+  name?: string | null;
+  /**
    * Number the player gave in the join form. Visible to admins only.
    */
   phone?: string | null;
@@ -302,7 +309,11 @@ export interface JoinAttempt {
     | 'ALREADY_JOINED'
     | 'UNAUTHENTICATED'
     | 'INVALID_REQUEST'
-    | 'ERROR';
+    | 'ERROR'
+    | 'LEFT'
+    | 'NOT_JOINED'
+    | 'HOST_CANNOT_LEAVE'
+    | 'GAME_STARTED';
   /**
    * Requested game ID. Stored as a number so attempts on missing games are logged too.
    */
@@ -491,8 +502,8 @@ export interface ArenasSelect<T extends boolean = true> {
   district?: T;
   address?: T;
   coordinates?: T;
+  image?: T;
   sportTypes?: T;
-  capacity?: T;
   description?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -540,6 +551,7 @@ export interface GamesSelect<T extends boolean = true> {
 export interface GameParticipantsSelect<T extends boolean = true> {
   game?: T;
   user?: T;
+  name?: T;
   phone?: T;
   updatedAt?: T;
   createdAt?: T;

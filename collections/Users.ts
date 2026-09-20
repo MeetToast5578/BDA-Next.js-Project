@@ -11,9 +11,9 @@ export const Users: CollectionConfig = {
   slug: 'users',
   access: {
     admin: ({ req }) => (req.user as { role?: string } | undefined)?.role === 'admin',
-    // Public sign-up for the registration page. `role` and `googleId` are admin-only fields,
-    // so a self-registered account is always a plain user and can't claim someone's Google login.
-    create: () => true,
+    // Google is the only way to sign up: the OAuth callback creates the account with
+    // `overrideAccess`, so nothing needs a public create route.
+    create: isAdmin,
     // Accounts hold emails and phone numbers: users only see and edit their own.
     read: isAdminOrSelf,
     update: isAdminOrSelf,

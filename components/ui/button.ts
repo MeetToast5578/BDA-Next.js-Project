@@ -10,6 +10,8 @@ export type ButtonVariant =
   | 'white'
   | 'ghost'
   | 'muted'
+  | 'danger'
+  | 'outlineDanger'
 export type ButtonSize = 'sm' | 'md' | 'lg' | 'xl'
 
 /** Class names for a button-styled <button> or <Link>. */

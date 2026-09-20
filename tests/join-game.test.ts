@@ -26,7 +26,7 @@ describe.skipIf(!process.env.DATABASE_URL)('claimSpot (Postgres)', () => {
       ),
     )
     userIds = users.map((user) => user.id)
-    arenaId = (await payload.create({ collection: 'arenas', data: { name: `Join Test Arena ${suffix}`, location: 'Bakı', capacity: 10 } })).id
+    arenaId = (await payload.create({ collection: 'arenas', data: { name: `Join Test Arena ${suffix}`, location: 'Bakı' } })).id
     teamId = (await payload.create({ collection: 'teams', data: { name: `Join Test ${suffix}`, sport: 'football' } })).id
   })
 
@@ -94,6 +94,25 @@ describe.skipIf(!process.env.DATABASE_URL)('claimSpot (Postgres)', () => {
 
     expect(await claimSpot(payload, cancelled, userIds[0])).toEqual({ ok: false, code: 'GAME_NOT_JOINABLE' })
     expect(await claimSpot(payload, started, userIds[0])).toEqual({ ok: false, code: 'GAME_NOT_JOINABLE' })
+  })
+
+  it('stores the name and phone the join form collected', async () => {
+    const gameId = await createGame({ availablePlayers: 5 })
+
+    expect(await claimSpot(payload, gameId, userIds[0], '+994502103456', 'Kərim Məmmədov')).toEqual({
+      ok: true,
+      remainingSpots: 4,
+      maxCount: 10,
+    })
+
+    const { docs } = await payload.find({
+      collection: 'game-participants',
+      where: { game: { equals: gameId } },
+      overrideAccess: true,
+    })
+    expect(docs).toHaveLength(1)
+    expect(docs[0].name).toBe('Kərim Məmmədov')
+    expect(docs[0].phone).toBe('+994502103456')
   })
 
   it('reports a missing game', async () => {

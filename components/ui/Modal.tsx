@@ -14,12 +14,15 @@ export function Modal({
   onClose,
   title,
   subtitle,
+  focusKey,
   children,
 }: {
   open: boolean
   onClose: () => void
   title: string
   subtitle?: string
+  /** Change it to re-run the `data-autofocus` focus, e.g. when a wizard swaps step. */
+  focusKey?: string | number
   children: React.ReactNode
 }) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -33,8 +36,10 @@ export function Modal({
       // showModal() focuses the first focusable element (the close button); prefer the marked field.
       dialog.querySelector<HTMLElement>('[data-autofocus]')?.focus()
     }
+    // Also on a focusKey change, when the previously focused control has just unmounted.
+    if (open && dialog.open) dialog.querySelector<HTMLElement>('[data-autofocus]')?.focus()
     if (!open && dialog.open) dialog.close()
-  }, [open])
+  }, [open, focusKey])
 
   return (
     <dialog

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 
 import { apiError } from '@/lib/api-response'
-import { getGameDetail, getPayloadClient } from '@/lib/game-queries'
+import { parseEditGameBody } from '@/lib/game-backend'
+import { deleteGame, getGameDetail, getGameHostId, getPayloadClient, updateGame } from '@/lib/game-queries'
 
 /** "Oyun Detalı". Signing in is optional; it only affects `viewer` and whether the host's phone is shown. */
 export async function GET(
@@ -19,5 +20,70 @@ export async function GET(
   } catch (error) {
     console.error(error)
     return apiError('INTERNAL_ERROR', 'Oyunu yükləmək mümkün olmadı.', 500)
+  }
+}
+
+/**
+ * Resolves the game and checks the caller may change it. Only the host and admins can, and the
+ * answer is the same 404 either way so a signed-in stranger can't probe which games exist.
+ */
+async function authorizeHost(request: Request, rawId: string) {
+  const gameId = Number(rawId)
+  if (!Number.isSafeInteger(gameId) || gameId <= 0) {
+    return { error: apiError('INVALID_GAME_ID', 'Oyun ID-si yanlışdır.', 400) } as const
+  }
+
+  const payload = await getPayloadClient()
+  const { user } = await payload.auth({ headers: request.headers })
+  if (!user) return { error: apiError('UNAUTHENTICATED', 'Bu əməliyyat üçün daxil olun.', 401) } as const
+
+  const hostId = await getGameHostId(gameId)
+  if (hostId === null) return { error: apiError('GAME_NOT_FOUND', 'Oyun tapılmadı.', 404) } as const
+
+  const isOwner = hostId === Number(user.id) || (user as { role?: string }).role === 'admin'
+  if (!isOwner) return { error: apiError('NOT_GAME_HOST', 'Yalnız oyunun hostu bu oyunu dəyişə bilər.', 403) } as const
+
+  return { gameId, userId: Number(user.id) } as const
+}
+
+/** "Oyunu redaktə et". Host only; the players already in are untouched. */
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const auth = await authorizeHost(request, (await params).id)
+    if ('error' in auth) return auth.error
+
+    const existing = await getGameDetail(auth.gameId, auth.userId)
+    if (!existing) return apiError('GAME_NOT_FOUND', 'Oyun tapılmadı.', 404)
+
+    const parsed = parseEditGameBody(await request.json().catch(() => null), existing.currentCount)
+    if (!parsed.ok) return apiError(parsed.code, parsed.message, 400)
+
+    const result = await updateGame(auth.gameId, parsed.input)
+    if (!result.ok) return apiError(result.code, result.message, result.code === 'GAME_NOT_FOUND' ? 404 : 400)
+
+    return NextResponse.json({ game: result.game })
+  } catch (error) {
+    console.error(error)
+    return apiError('INTERNAL_ERROR', 'Oyunu yeniləmək mümkün olmadı.', 500)
+  }
+}
+
+/** "Oyunu sil". Host only; removes the game and everyone's place in it. */
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const auth = await authorizeHost(request, (await params).id)
+    if ('error' in auth) return auth.error
+
+    await deleteGame(auth.gameId)
+    return NextResponse.json({ ok: true, id: String(auth.gameId) })
+  } catch (error) {
+    console.error(error)
+    return apiError('INTERNAL_ERROR', 'Oyunu silmək mümkün olmadı.', 500)
   }
 }

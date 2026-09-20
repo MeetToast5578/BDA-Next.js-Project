@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 
-import { EmptyState } from '@/components/games/GamesGrid'
+import { EmptyState } from '@/components/games/EmptyState'
 import { buttonClass } from '@/components/ui/button'
 
 export default function Error({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {

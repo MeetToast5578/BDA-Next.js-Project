@@ -54,6 +54,14 @@ export const Arena: CollectionConfig = {
         !value || parseCoordinates(value) !== null || 'Use "latitude,longitude", for example 40.3755,49.8335.',
     },
     {
+      name: 'image',
+      type: 'upload',
+      relationTo: 'media',
+      admin: {
+        description: 'Photo of the venue. Games here use it as their cover unless they set one of their own.',
+      },
+    },
+    {
       name: 'sportTypes',
       type: 'select',
       hasMany: true,
@@ -62,12 +70,6 @@ export const Arena: CollectionConfig = {
         { label: 'Basketball', value: 'basketball' },
         { label: 'Tennis', value: 'tennis' },
       ],
-    },
-    {
-      name: 'capacity',
-      type: 'number',
-      min: 1,
-      required: true,
     },
     {
       name: 'description',

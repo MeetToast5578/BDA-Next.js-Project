@@ -29,15 +29,14 @@ export function AuthShell({
   title,
   description,
   googleHref,
-  children,
+  unavailableNote,
 }: {
   eyebrow?: string
   title: string
   description: string
-  /** Omitted when Google sign-in isn't configured. */
+  /** Omitted when Google sign-in isn't configured; `unavailableNote` is then shown instead. */
   googleHref?: string
-  /** Omitted for Google-only pages (no divider or form card is rendered). */
-  children?: React.ReactNode
+  unavailableNote: string
 }) {
   return (
     <section className={styles.shell} aria-labelledby="auth-title">
@@ -52,18 +51,17 @@ export function AuthShell({
           <p className={styles.description}>{description}</p>
         </div>
 
-        {googleHref && (
-          <>
-            {/* A plain link: the OAuth flow is a full-page redirect. */}
-            <a href={googleHref} className={styles.google}>
-              <GoogleIcon />
-              Google ilə davam et
-            </a>
-            {children && <p className={styles.divider}>və ya</p>}
-          </>
+        {googleHref ? (
+          // A plain link: the OAuth flow is a full-page redirect.
+          <a href={googleHref} className={styles.google}>
+            <GoogleIcon />
+            Google ilə davam et
+          </a>
+        ) : (
+          <p className={styles.unavailable} role="alert">
+            {unavailableNote}
+          </p>
         )}
-
-        {children && <div className={styles.card}>{children}</div>}
       </div>
     </section>
   )
