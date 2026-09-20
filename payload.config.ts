@@ -30,6 +30,10 @@ export default buildConfig({
     outputFile: path.resolve(dirname, "payload-types.ts"),
   },
   db: postgresAdapter({
+    // DATABASE_URL is a pooled (PgBouncer) endpoint. Drizzle's dev-time schema push introspects via
+    // session-level queries the pooler drops mid-flight, which fails Payload init and breaks every
+    // write in the admin panel. Schema changes go through migrations instead.
+    push: false,
     pool: {
       connectionString: process.env.DATABASE_URL || "",
     },

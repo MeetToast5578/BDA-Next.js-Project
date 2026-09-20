@@ -10,7 +10,10 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "seed": "payload run scripts/seed.ts"
+    "seed": "payload run scripts/seed.ts",
+    "migrate": "payload migrate",
+    "migrate:create": "payload migrate:create",
+    "migrate:status": "payload migrate:status"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "^3.89.0",
