@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       // Google profile pictures saved at Google sign-in (users.avatarUrl).
       new URL("https://lh3.googleusercontent.com/**"),
+      // Uploads, once the Vercel Blob plugin is active: media.url becomes an absolute Blob URL
+      // on the store's own subdomain. Object form because new URL() cannot carry the wildcard.
+      { protocol: "https" as const, hostname: "*.public.blob.vercel-storage.com", pathname: "/**" },
       ...(mediaBaseUrl ? [new URL(`${mediaBaseUrl}/**`)] : []),
     ],
   },
