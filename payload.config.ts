@@ -13,6 +13,15 @@ import { Games } from "./collections/Games";
 import { GameParticipants } from "./collections/GameParticipants";
 import { JoinAttempts } from "./collections/JoinAttempts";
 
+/**
+ * Only a well-formed token counts. `vercel env pull` writes the literal "[SENSITIVE]" for secrets it
+ * may not export, and the adapter throws on a malformed token at config load — which takes the whole
+ * app down, not just uploads. An unusable token therefore means "no Blob", same as an absent one.
+ */
+const blobToken = /^vercel_blob_rw_[a-z\d]+_[a-z\d]+$/i.test(process.env.BLOB_READ_WRITE_TOKEN ?? "")
+  ? (process.env.BLOB_READ_WRITE_TOKEN as string)
+  : "";
+
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
 
@@ -44,9 +53,9 @@ export default buildConfig({
     // Vercel's filesystem is read-only and per-invocation, so uploads cannot live on disk there.
     // Disabled without a token so local dev keeps writing to ./media and needs no Blob store.
     vercelBlobStorage({
-      enabled: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+      enabled: Boolean(blobToken),
       collections: { media: true },
-      token: process.env.BLOB_READ_WRITE_TOKEN || "",
+      token: blobToken,
     }),
   ],
 });

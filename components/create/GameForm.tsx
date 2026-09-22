@@ -7,10 +7,12 @@ import { apiFetch, ApiError, postJson } from '@/lib/api-client'
 import type { CreateGameRequest, CurrentUser, GameDetail, Venue } from '@/lib/api-types'
 import {
   DATE_FORMATS,
+  formatDateInput,
   formatDateText,
   formatTimeText,
   parseDateText,
   parseTimeText,
+  formatTimeInput,
   TIME_FORMATS,
   type DateFormat,
   type TimeFormat,
@@ -234,9 +236,9 @@ export function GameForm({
     if (problem) setErrors((current) => ({ ...current, time: problem }))
   }
 
-  /** Rewrites a valid value in the new format; text that doesn't parse is left for the user to fix. */
+  /** Rewrites a valid value in the new format; half-typed text is re-masked so its separators follow too. */
   function changeDateFormat(next: DateFormat) {
-    if (date) setDateText(formatDateText(date, next))
+    setDateText(date ? formatDateText(date, next) : formatDateInput(dateText, next))
     setDateFormat(next)
     setErrors((current) => ({ ...current, date: undefined }))
   }
@@ -447,7 +449,7 @@ export function GameForm({
                   autoComplete="off"
                   placeholder={DATE_FORMATS[dateFormat].label}
                   value={dateText}
-                  onChange={edit('date', setDateText)}
+                  onChange={edit('date', (value) => setDateText(formatDateInput(value, dateFormat)))}
                   onBlur={tidyDate}
                   required
                   aria-invalid={invalid('date')}
@@ -503,7 +505,7 @@ export function GameForm({
                   autoComplete="off"
                   placeholder={`məs. ${TIME_FORMATS[timeFormat].example}`}
                   value={timeText}
-                  onChange={edit('time', setTimeText)}
+                  onChange={edit('time', (value) => setTimeText(formatTimeInput(value)))}
                   onBlur={tidyTime}
                   required
                   aria-invalid={invalid('time')}

@@ -46,3 +46,6 @@ node_modules/
 dist/
 .env
 .prisma/
+
+.vercel
+.env*

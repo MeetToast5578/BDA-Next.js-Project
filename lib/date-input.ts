@@ -79,3 +79,57 @@ export function formatTimeText(time: string, format: TimeFormat) {
   const [hours, minutes] = time.split(':').map(Number)
   return `${hours % 12 || 12}:${pad(minutes)} ${hours < 12 ? 'AM' : 'PM'}`
 }
+
+/** Digits each part takes, so a mask knows where one ends and the next begins. */
+const WIDTHS: Record<Part, number> = { d: 2, m: 2, y: 4 }
+
+/**
+ * Masks a date while it is typed, the way the phone field does: digits are regrouped into the chosen
+ * format and its separators are put in for the user, so "1909" shows as "19.09". Non-digits are
+ * dropped, which means typing the separator yourself, or pasting a date punctuated another way, both
+ * land on the same text. A separator typed right after a full part is kept, so "19." does not jump
+ * back to "19" under the caret.
+ */
+export function formatDateInput(input: string, format: DateFormat) {
+  const { order, separator } = DATE_FORMATS[format]
+  const widths = order.map((part) => WIDTHS[part])
+  const total = widths.reduce((sum, width) => sum + width, 0)
+  const digits = input.replace(/\D/g, '').slice(0, total)
+
+  const groups: string[] = []
+  let at = 0
+  for (const width of widths) {
+    if (at >= digits.length) break
+    groups.push(digits.slice(at, at + width))
+    at += width
+  }
+
+  const last = groups.length - 1
+  const openSeparator =
+    groups.length > 0 && groups.length < widths.length && groups[last].length === widths[last] && /\D$/.test(input)
+  return groups.join(separator) + (openSeparator ? separator : '')
+}
+
+/**
+ * Masks a time while it is typed. A separator the user typed decides the split, so "2:30" stays half
+ * past two. Without one, two leading digits are the hour when they can be one (00-23) and otherwise a
+ * single digit is, which is what lets "73" and "730" read as 7:3 and 7:30. An "a"/"p" is only
+ * upper-cased, never completed to "AM"/"PM", so backspace can still take it off; `formatTimeText`
+ * spells it out on blur.
+ */
+export function formatTimeInput(input: string) {
+  const marker = /([ap])\s*\.?\s*(m?)/i.exec(input)
+  const tail = marker ? ` ${marker[1].toUpperCase()}${marker[2] ? 'M' : ''}` : ''
+
+  const typed = /^\s*(\d{1,2})\s*[:.]\s*(\d{0,2})/.exec(input)
+  const digits = input.replace(/\D/g, '').slice(0, 4)
+  if (!typed && !digits) return ''
+
+  // Two digits lead only when they could be an hour; "730" is 7:30, not 73:0.
+  const hourLength = digits.length >= 2 && Number(digits.slice(0, 2)) <= 23 ? 2 : 1
+  const hour = typed ? typed[1] : digits.slice(0, hourLength)
+  const minute = typed ? typed[2] : digits.slice(hourLength, hourLength + 2)
+  const openSeparator = minute === '' && /\d\s*[:.]/.test(input)
+
+  return `${hour}${minute ? `:${minute}` : openSeparator ? ':' : ''}${tail}`
+}

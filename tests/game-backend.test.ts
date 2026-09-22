@@ -20,7 +20,14 @@ import {
   startOfBakuDay,
   toGameCard,
 } from '@/lib/game-backend'
-import { formatDateText, formatTimeText, parseDateText, parseTimeText } from '@/lib/date-input'
+import {
+  formatDateInput,
+  formatDateText,
+  formatTimeInput,
+  formatTimeText,
+  parseDateText,
+  parseTimeText,
+} from '@/lib/date-input'
 import { formatLocalPhone } from '@/lib/phone'
 
 const HOUR_MS = 60 * 60 * 1000
@@ -275,6 +282,57 @@ describe('typed date and time', () => {
     // In the 12-hour format, 19:30 is still unambiguous; 7:30 without AM/PM is not.
     expect(parseTimeText('19:30', '12h')).toBe('19:30')
     expect(parseTimeText('7:30', '12h')).toBeNull()
+  })
+
+  it('masks a date as it is typed, in the chosen format', () => {
+    // Separators appear on their own, so the user only types digits.
+    expect(formatDateInput('1', 'dd.mm.yyyy')).toBe('1')
+    expect(formatDateInput('19', 'dd.mm.yyyy')).toBe('19')
+    expect(formatDateInput('190', 'dd.mm.yyyy')).toBe('19.0')
+    expect(formatDateInput('19092026', 'dd.mm.yyyy')).toBe('19.09.2026')
+    // Each format groups and punctuates the same digits its own way.
+    expect(formatDateInput('19092026', 'dd/mm/yyyy')).toBe('19/09/2026')
+    expect(formatDateInput('20260919', 'yyyy-mm-dd')).toBe('2026-09-19')
+    expect(formatDateInput('2026', 'yyyy-mm-dd')).toBe('2026')
+    expect(formatDateInput('202609', 'yyyy-mm-dd')).toBe('2026-09')
+    // Typing or pasting other punctuation lands on the same text.
+    expect(formatDateInput('19/09/2026', 'dd.mm.yyyy')).toBe('19.09.2026')
+    expect(formatDateInput('19.09.2026', 'yyyy-mm-dd')).toBe('1909-20-26')
+    // A separator typed after a full part is kept, so it does not vanish under the caret.
+    expect(formatDateInput('19.', 'dd.mm.yyyy')).toBe('19.')
+    expect(formatDateInput('19.09.', 'dd.mm.yyyy')).toBe('19.09.')
+    // Overtyping past the end is dropped rather than shifting the parts along.
+    expect(formatDateInput('190920269999', 'dd.mm.yyyy')).toBe('19.09.2026')
+    expect(formatDateInput('', 'dd.mm.yyyy')).toBe('')
+  })
+
+  it('masks a time as it is typed', () => {
+    expect(formatTimeInput('1')).toBe('1')
+    expect(formatTimeInput('19')).toBe('19')
+    expect(formatTimeInput('193')).toBe('19:3')
+    expect(formatTimeInput('1930')).toBe('19:30')
+    // Two digits lead only when they could be an hour, so these are 7:3 and 7:30, not 73:0.
+    expect(formatTimeInput('73')).toBe('7:3')
+    expect(formatTimeInput('730')).toBe('7:30')
+    expect(formatTimeInput('0730')).toBe('07:30')
+    // A typed separator decides the split, so half past two stays half past two.
+    expect(formatTimeInput('2:30')).toBe('2:30')
+    expect(formatTimeInput('19:30')).toBe('19:30')
+    expect(formatTimeInput('19.30')).toBe('19:30')
+    expect(formatTimeInput('7:')).toBe('7:')
+    // AM/PM is only upper-cased, never completed, so backspace can still remove it.
+    expect(formatTimeInput('7:30 p')).toBe('7:30 P')
+    expect(formatTimeInput('7:30 pm')).toBe('7:30 PM')
+    expect(formatTimeInput('7:30 ')).toBe('7:30')
+    expect(formatTimeInput('')).toBe('')
+  })
+
+  it('hands the mask back to the parser, so what is typed is what is read', () => {
+    expect(parseDateText(formatDateInput('19092026', 'dd.mm.yyyy'), 'dd.mm.yyyy')).toBe('2026-09-19')
+    expect(parseDateText(formatDateInput('09192026', 'mm/dd/yyyy'), 'mm/dd/yyyy')).toBe('2026-09-19')
+    expect(parseTimeText(formatTimeInput('730'), '24h')).toBe('07:30')
+    expect(parseTimeText(formatTimeInput('1930'), '24h')).toBe('19:30')
+    expect(parseTimeText(formatTimeInput('7:30 pm'), '12h')).toBe('19:30')
   })
 
   it('rejects impossible times', () => {
