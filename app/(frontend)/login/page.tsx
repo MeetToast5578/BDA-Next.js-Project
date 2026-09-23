@@ -5,6 +5,9 @@ import { AuthShell } from '@/components/auth/AuthShell'
 import { safeRedirectPath } from '@/lib/safe-redirect'
 import { getCurrentUser, isGoogleAuthConfigured } from '@/lib/session'
 
+/** Redirects anyone already signed in and echoes `?next=`, both request-time decisions. */
+export const instant = false
+
 export const metadata: Metadata = { title: 'Daxil ol' }
 
 /** Google is the only way in: there is no email/password form and no separate sign-up. */

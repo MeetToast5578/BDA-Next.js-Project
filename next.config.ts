@@ -4,6 +4,9 @@ import type { NextConfig } from "next";
 const mediaBaseUrl = process.env.MEDIA_BASE_URL?.replace(/\/+$/, "");
 
 const nextConfig: NextConfig = {
+  // Lets every route prerender a static shell and stream the request-dependent parts (the signed-in
+  // header chip) behind Suspense, instead of blocking the whole page on a session lookup.
+  cacheComponents: true,
   images: {
     // AVIF where the browser accepts it, WebP otherwise.
     formats: ["image/avif", "image/webp"],

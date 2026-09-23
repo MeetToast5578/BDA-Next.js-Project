@@ -1,3 +1,4 @@
+import { cacheLife } from 'next/cache'
 import Link from 'next/link'
 
 import styles from './Footer.module.css'
@@ -9,7 +10,12 @@ const LINKS = [
   { href: '/contact', label: 'Əlaqə' },
 ]
 
-export function Footer() {
+// The copyright year is the only moving part; caching it daily keeps the footer in the static shell
+// instead of forcing every page that renders it to wait for request time.
+export async function Footer() {
+  'use cache'
+  cacheLife('days')
+
   return (
     <footer className={styles.footer}>
       <div className={styles.inner}>

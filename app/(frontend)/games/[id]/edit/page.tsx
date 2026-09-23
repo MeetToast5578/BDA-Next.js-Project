@@ -9,6 +9,9 @@ import { getGameDetail } from '@/lib/game-queries'
 import { loginHref } from '@/lib/safe-redirect'
 import { getCurrentUser } from '@/lib/session'
 
+/** Host-only form behind an auth redirect; nothing here is the same for two different visitors. */
+export const instant = false
+
 export const metadata: Metadata = { title: 'Oyunu redaktə et' }
 
 type Props = { params: Promise<{ id: string }> }

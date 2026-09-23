@@ -15,6 +15,13 @@ import { formatPhone } from '@/lib/phone'
 import { loginHref } from '@/lib/safe-redirect'
 import { getCurrentUser } from '@/lib/session'
 
+/**
+ * Everything on this page hangs off who is asking — the join panel, the host controls, and the
+ * signed-out redirect that `?join=1` triggers — so there is no useful shell to prerender ahead of
+ * the session. It keeps blocking on the server; the rest of the site still gets a static shell.
+ */
+export const instant = false
+
 type Props = {
   params: Promise<{ id: string }>
   searchParams: Promise<Record<string, string | string[] | undefined>>

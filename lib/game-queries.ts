@@ -1,4 +1,4 @@
-import { unstable_cache } from 'next/cache'
+import { cacheLife, cacheTag } from 'next/cache'
 import type { Payload, Where } from 'payload'
 
 import { GAMES_CACHE_TAG, invalidateGamesCache } from '@/lib/cache-tags'
@@ -19,12 +19,11 @@ import {
   type GameListQuery,
 } from '@/lib/game-backend'
 
-// ponytail: still on unstable_cache, which Next 16 deprecates in favour of the `use cache` directive.
-// Switching needs `cacheComponents: true` in next.config.ts plus Suspense boundaries around the
-// auth-dependent header, so it is a deliberate deferral, not an oversight.
-
-/** Cached reads refresh at least this often; game, venue and join writes expire them immediately. */
-const CACHE_SECONDS = 60
+/**
+ * Cached reads refresh at least this often; game, venue and join writes expire them immediately.
+ * The `minutes` profile revalidates on the same 60s cadence these reads used before.
+ */
+const CACHE_PROFILE = 'minutes'
 /** Rounding applied to the list window's start, so requests in the same minute share a cache entry. */
 const LIST_BUCKET_MS = 60_000
 const FEATURED_CANDIDATE_LIMIT = 100
@@ -103,22 +102,22 @@ async function findParticipantPreviews(payload: Payload, gameIds: Array<number |
   return previews
 }
 
-const findOpenGameSlots = unstable_cache(
-  async (city: string) => {
-    const payload = await getPayloadClient()
-    const { docs } = await payload.find({
-      collection: 'games',
-      where: upcomingOpenWhere(city, new Date()),
-      select: { sport: true, status: true, scheduledAt: true, maxPlayers: true, availablePlayers: true },
-      depth: 0,
-      pagination: false,
-      overrideAccess: true,
-    })
-    return docs
-  },
-  ['open-game-slots'],
-  { tags: [GAMES_CACHE_TAG], revalidate: CACHE_SECONDS },
-)
+async function findOpenGameSlots(city: string) {
+  'use cache'
+  cacheLife(CACHE_PROFILE)
+  cacheTag(GAMES_CACHE_TAG)
+
+  const payload = await getPayloadClient()
+  const { docs } = await payload.find({
+    collection: 'games',
+    where: upcomingOpenWhere(city, new Date()),
+    select: { sport: true, status: true, scheduledAt: true, maxPlayers: true, availablePlayers: true },
+    depth: 0,
+    pagination: false,
+    overrideAccess: true,
+  })
+  return docs
+}
 
 export async function getOpenGamesCountBySport(city: string, now = Date.now()) {
   // Availability is re-derived per request so a game that started since the cache fill is not counted.
@@ -132,48 +131,48 @@ export async function getOpenGamesCountBySport(city: string, now = Date.now()) {
  * The raw list read, cached per distinct filter set. `from` arrives bucketed (see `findGames`) so
  * repeat requests within the same bucket share one read instead of each paying a database round trip.
  */
-const findGameDocs = unstable_cache(
-  async (
-    sport: string | null,
-    city: string,
-    fromIso: string,
-    toIso: string,
-    onlyOpen: boolean,
-    page: number,
-    limit: number,
-  ) => {
-    const payload = await getPayloadClient()
-    const result = await payload.find({
-      collection: 'games',
-      where: {
-        and: [
-          { status: { equals: 'scheduled' } },
-          { scheduledAt: { greater_than: fromIso } },
-          { scheduledAt: { less_than: toIso } },
-          cityWhere('arena.city', city),
-          ...(sport ? [{ sport: { equals: sport } }] : []),
-          ...(onlyOpen ? [{ availablePlayers: { greater_than: 0 } }] : []),
-        ],
-      },
-      select: CARD_SELECT,
-      populate: CARD_POPULATE,
-      sort: 'scheduledAt',
-      page,
-      limit,
-      depth: 2,
-      overrideAccess: true,
-    })
-    return {
-      docs: result.docs,
-      page: result.page ?? page,
-      totalDocs: result.totalDocs,
-      totalPages: result.totalPages,
-      hasNextPage: result.hasNextPage,
-    }
-  },
-  ['game-list'],
-  { tags: [GAMES_CACHE_TAG], revalidate: CACHE_SECONDS },
-)
+async function findGameDocs(
+  sport: string | null,
+  city: string,
+  fromIso: string,
+  toIso: string,
+  onlyOpen: boolean,
+  page: number,
+  limit: number,
+) {
+  'use cache'
+  cacheLife(CACHE_PROFILE)
+  cacheTag(GAMES_CACHE_TAG)
+
+  const payload = await getPayloadClient()
+  const result = await payload.find({
+    collection: 'games',
+    where: {
+      and: [
+        { status: { equals: 'scheduled' } },
+        { scheduledAt: { greater_than: fromIso } },
+        { scheduledAt: { less_than: toIso } },
+        cityWhere('arena.city', city),
+        ...(sport ? [{ sport: { equals: sport } }] : []),
+        ...(onlyOpen ? [{ availablePlayers: { greater_than: 0 } }] : []),
+      ],
+    },
+    select: CARD_SELECT,
+    populate: CARD_POPULATE,
+    sort: 'scheduledAt',
+    page,
+    limit,
+    depth: 2,
+    overrideAccess: true,
+  })
+  return {
+    docs: result.docs,
+    page: result.page ?? page,
+    totalDocs: result.totalDocs,
+    totalPages: result.totalPages,
+    hasNextPage: result.hasNextPage,
+  }
+}
 
 export async function findGames(query: GameListQuery, now = new Date()) {
   // `query.from` is "now", which would make every request a unique cache key. Bucketing it keeps the
@@ -206,26 +205,26 @@ export async function findGames(query: GameListQuery, now = new Date()) {
   }
 }
 
-const findFeaturedCandidates = unstable_cache(
-  async (city: string) => {
-    const payload = await getPayloadClient()
-    const now = Date.now()
-    const { docs } = await payload.find({
-      collection: 'games',
-      where: upcomingOpenWhere(city, new Date(now), new Date(now + FEATURED_WINDOW_HOURS * HOUR_MS)),
-      select: CARD_SELECT,
-      populate: CARD_POPULATE,
-      sort: 'scheduledAt',
-      limit: FEATURED_CANDIDATE_LIMIT,
-      depth: 2,
-      overrideAccess: true,
-    })
-    const previews = await findParticipantPreviews(payload, docs.map((doc) => doc.id))
-    return docs.map((doc) => ({ doc, participants: previews.get(String(doc.id)) ?? [] }))
-  },
-  ['featured-candidates'],
-  { tags: [GAMES_CACHE_TAG], revalidate: CACHE_SECONDS },
-)
+async function findFeaturedCandidates(city: string) {
+  'use cache'
+  cacheLife(CACHE_PROFILE)
+  cacheTag(GAMES_CACHE_TAG)
+
+  const payload = await getPayloadClient()
+  const now = Date.now()
+  const { docs } = await payload.find({
+    collection: 'games',
+    where: upcomingOpenWhere(city, new Date(now), new Date(now + FEATURED_WINDOW_HOURS * HOUR_MS)),
+    select: CARD_SELECT,
+    populate: CARD_POPULATE,
+    sort: 'scheduledAt',
+    limit: FEATURED_CANDIDATE_LIMIT,
+    depth: 2,
+    overrideAccess: true,
+  })
+  const previews = await findParticipantPreviews(payload, docs.map((doc) => doc.id))
+  return docs.map((doc) => ({ doc, participants: previews.get(String(doc.id)) ?? [] }))
+}
 
 export async function getFeaturedGames(city: string, limit: number, now = Date.now()) {
   const candidates = await findFeaturedCandidates(city)
@@ -431,23 +430,23 @@ export async function deleteGame(gameId: number) {
   invalidateGamesCache()
 }
 
-const findVenues = unstable_cache(
-  async (city: string) => {
-    const payload = await getPayloadClient()
-    const { docs } = await payload.find({
-      collection: 'arenas',
-      where: cityWhere('city', city),
-      select: { name: true, location: true, city: true, district: true, address: true, coordinates: true, sportTypes: true },
-      sort: 'name',
-      depth: 0,
-      pagination: false,
-      overrideAccess: true,
-    })
-    return docs
-  },
-  ['venues'],
-  { tags: [GAMES_CACHE_TAG], revalidate: CACHE_SECONDS },
-)
+async function findVenues(city: string) {
+  'use cache'
+  cacheLife(CACHE_PROFILE)
+  cacheTag(GAMES_CACHE_TAG)
+
+  const payload = await getPayloadClient()
+  const { docs } = await payload.find({
+    collection: 'arenas',
+    where: cityWhere('city', city),
+    select: { name: true, location: true, city: true, district: true, address: true, coordinates: true, sportTypes: true },
+    sort: 'name',
+    depth: 0,
+    pagination: false,
+    overrideAccess: true,
+  })
+  return docs
+}
 
 /** Venue picker options. Venues without sport types listed are offered for every sport. */
 export async function listVenues(city: string, sport: string | null, search: string | null) {

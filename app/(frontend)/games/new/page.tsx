@@ -9,6 +9,9 @@ import { sportFromSearchParams } from '@/lib/page-data'
 import { loginHref } from '@/lib/safe-redirect'
 import { getCurrentUser } from '@/lib/session'
 
+/** Signed-in-only form that redirects anonymous visitors, so there is no shell worth prerendering. */
+export const instant = false
+
 export const metadata: Metadata = { title: 'Yeni oyun yarat' }
 
 export default async function CreateGamePage({

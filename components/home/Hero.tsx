@@ -1,11 +1,14 @@
 import Link from 'next/link'
+import type { ReactNode } from 'react'
 
-import type { FeaturedGame } from '@/lib/api-types'
 import { buttonClass } from '@/components/ui/button'
 import styles from './Hero.module.css'
-import { TicketCarousel } from './TicketCarousel'
 
-export function Hero({ featured, gamesAnchor }: { featured: FeaturedGame[]; gamesAnchor: string }) {
+/**
+ * Everything here is static, so it prerenders into the shell and paints immediately. The carousel
+ * is passed in as a slot because it needs the featured games, which are ranked at request time.
+ */
+export function Hero({ carousel, gamesAnchor }: { carousel?: ReactNode; gamesAnchor: string }) {
   return (
     <section className={styles.hero} aria-labelledby="hero-title">
       <div className={styles.grid} aria-hidden="true" />
@@ -30,7 +33,7 @@ export function Hero({ featured, gamesAnchor }: { featured: FeaturedGame[]; game
         </div>
       </div>
 
-      {featured.length > 0 && <TicketCarousel games={featured} />}
+      {carousel}
     </section>
   )
 }

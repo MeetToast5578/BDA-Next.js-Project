@@ -99,6 +99,13 @@
   white-space: nowrap;
 }
 
+/* Matches the "Daxil ol" button, the widest thing the signed-out slot renders. */
+.sessionPlaceholder {
+  display: block;
+  width: 103px;
+  height: 40px;
+}
+
 @media (max-width: 1023px) {
   .nav {
     padding-inline: var(--gutter);

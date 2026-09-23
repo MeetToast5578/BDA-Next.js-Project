@@ -10,8 +10,14 @@ import { getPayloadClient } from '@/lib/game-queries'
 /**
  * The signed-in user (Payload session or Google session cookie), or null.
  * Cached per request so the header and the page share one lookup.
+ *
+ * `use cache: private` is what lets a session read be prefetched: the result is held in the
+ * browser only, never on the server, so one signed-in user's identity can never be served to
+ * another. It is also the only cache scope allowed to read `headers()`.
  */
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
+  'use cache: private'
+
   const payload = await getPayloadClient()
   const { user } = await payload.auth({ headers: await headers() })
   if (!user || user.collection !== 'users') return null

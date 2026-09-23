@@ -9,6 +9,14 @@ const PAGE_SIZE = 12
 /** "Bütün oyunlar" lists everything scheduled in the coming year, not just today and tomorrow. */
 const WINDOW_DAYS = 366
 
+/**
+ * The whole page is the filtered list, and the filter arrives in `?sport=`, so there is little left
+ * to prerender once it is removed. The underlying reads are still cached, so this blocks on cache
+ * hits rather than database round trips. Splitting the tabs out into a static shell with the grid
+ * behind Suspense is the next step if this page ever needs to feel instant.
+ */
+export const instant = false
+
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> }
 
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
