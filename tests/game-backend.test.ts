@@ -688,4 +688,13 @@ describe('normalizeGameRecord / toGameCard', () => {
     const game = normalizeGameRecord({ ...raw, arena: { ...raw.arena, image: { alt: 'no file yet' } } }, NOW)
     expect(game.cover.fullUrl).toBe('/images/game-football-1-7880cc.png')
   })
+
+  it("uses the venue's public image path when it has no uploaded photo", () => {
+    const imagePath = '/images/arenas/inter-arena.png'
+    const game = normalizeGameRecord({ ...raw, arena: { ...raw.arena, image: null, imagePath } }, NOW)
+    expect(game.cover).toEqual({ thumbnailUrl: imagePath, fullUrl: imagePath, fallbackUrl: '/images/game-football-1-7880cc.png' })
+
+    const uploaded = normalizeGameRecord({ ...raw, arena: { ...raw.arena, image: venuePhoto, imagePath } }, NOW)
+    expect(uploaded.cover.fullUrl).toBe('/api/media/file/inter-1600x900.webp')
+  })
 })

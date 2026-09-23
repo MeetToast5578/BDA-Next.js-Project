@@ -338,7 +338,7 @@ function mediaSizes(value: unknown) {
 
 /**
  * Cover for a game card, most specific source first: the game's own uploaded cover, then its
- * `image` path, then the venue's photo, then the sport's default picture. The venue photo means a
+ * `image` path, then the venue's uploaded photo or `imagePath`, then the sport's default picture. The venue photo means a
  * host who uploads nothing still gets a picture of the place they are playing, not generic stock art.
  */
 function resolveCoverImage(game: Doc, fallbackUrl: string) {
@@ -348,8 +348,13 @@ function resolveCoverImage(game: Doc, fallbackUrl: string) {
   const ownPath = nonEmptyString(game.image)
   if (ownPath) return { thumbnailUrl: ownPath, fullUrl: ownPath, fallbackUrl }
 
-  const venue = mediaSizes(asDoc(game.arena)?.image)
+  const arena = asDoc(game.arena)
+  const venue = mediaSizes(arena?.image)
   if (venue) return { thumbnailUrl: venue.thumbnail, fullUrl: venue.full, fallbackUrl }
+
+  // Shipped in public/, so it loads on any deploy without depending on upload storage.
+  const venuePath = nonEmptyString(arena?.imagePath)
+  if (venuePath) return { thumbnailUrl: venuePath, fullUrl: venuePath, fallbackUrl }
 
   return { thumbnailUrl: fallbackUrl, fullUrl: fallbackUrl, fallbackUrl }
 }

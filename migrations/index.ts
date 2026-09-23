@@ -1,9 +1,15 @@
 import * as migration_20260920_195825_baseline from './20260920_195825_baseline';
+import * as migration_20260923_210137_arena_image_path from './20260923_210137_arena_image_path';
 
 export const migrations = [
   {
     up: migration_20260920_195825_baseline.up,
     down: migration_20260920_195825_baseline.down,
-    name: '20260920_195825_baseline'
+    name: '20260920_195825_baseline',
+  },
+  {
+    up: migration_20260923_210137_arena_image_path.up,
+    down: migration_20260923_210137_arena_image_path.down,
+    name: '20260923_210137_arena_image_path'
   },
 ];

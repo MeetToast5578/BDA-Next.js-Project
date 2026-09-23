@@ -220,6 +220,10 @@ export interface Arena {
    * Photo of the venue. Games here use it as their cover unless they set one of their own.
    */
   image?: (number | null) | Media;
+  /**
+   * Fallback public image path such as /images/arenas/inter-arena.png, used when no photo is uploaded.
+   */
+  imagePath?: string | null;
   sportTypes?: ('football' | 'basketball' | 'tennis')[] | null;
   description?: string | null;
   updatedAt: string;
@@ -503,6 +507,7 @@ export interface ArenasSelect<T extends boolean = true> {
   address?: T;
   coordinates?: T;
   image?: T;
+  imagePath?: T;
   sportTypes?: T;
   description?: T;
   updatedAt?: T;

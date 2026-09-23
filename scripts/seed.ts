@@ -317,6 +317,8 @@ for (const venue of VENUES) {
       district: venue.district,
       address: venue.address,
       coordinates: venue.coordinates,
+      // Each venue's photo ships in public/images/arenas, named after the venue.
+      imagePath: `/images/arenas/${slugify(venue.name).replace(/\./g, '-')}.png`,
       sportTypes: venue.sportTypes,
       description: venue.description,
     },

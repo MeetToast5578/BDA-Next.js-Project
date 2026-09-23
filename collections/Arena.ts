@@ -62,6 +62,13 @@ export const Arena: CollectionConfig = {
       },
     },
     {
+      name: 'imagePath',
+      type: 'text',
+      admin: {
+        description: 'Fallback public image path such as /images/arenas/inter-arena.png, used when no photo is uploaded.',
+      },
+    },
+    {
       name: 'sportTypes',
       type: 'select',
       hasMany: true,
