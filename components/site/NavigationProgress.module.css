@@ -1,0 +1,32 @@
+.track {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 200;
+  height: 3px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease 0.1s;
+}
+
+.track[data-phase='loading'],
+.track[data-phase='done'] {
+  opacity: 1;
+  transition: none;
+}
+
+.track[data-phase='done'] {
+  opacity: 0;
+  transition: opacity 0.25s ease 0.15s;
+}
+
+.bar {
+  height: 100%;
+  transform-origin: left center;
+  background: linear-gradient(90deg, var(--color-accent), #ffd48a 60%, var(--color-accent));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--color-accent) 70%, transparent);
+  transition: transform 0.22s var(--ease-out);
+}
+
+.track[data-phase='idle'] .bar {
+  transition: none;
+}

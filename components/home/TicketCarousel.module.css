@@ -3,6 +3,8 @@
   --slide-gap: 32px;
   --side-scale: 0.777;
   position: relative;
+  /* Above the hero's background blooms. */
+  z-index: 1;
   margin-top: 40px;
 }
 
@@ -85,6 +87,9 @@
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   background: var(--glass-bg);
+  transition:
+    border-color 0.25s ease,
+    background-color 0.25s ease;
 }
 
 .ticketTop {
@@ -156,6 +161,11 @@
 .ticketTitle a:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.ticket:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .ticketTitle a:focus-visible {
@@ -237,11 +247,17 @@
   border: 0;
   border-radius: 24px;
   background: rgba(222, 227, 214, 0.1);
-  transition: background-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    transform 0.2s var(--ease-out);
 }
 
 .arrow:hover {
   background: rgba(222, 227, 214, 0.22);
+}
+
+.arrow:active {
+  transform: scale(0.92);
 }
 
 .flip {
@@ -284,6 +300,52 @@
 .dot[aria-current='true']::before {
   width: 12px;
   background: var(--color-accent);
+}
+
+/* Loading placeholder: a static row with the middle ticket centred and the neighbours shrunk, as the
+   real track looks at rest. Overflowing a centred flex row spills evenly off both edges. */
+.skeleton {
+  pointer-events: none;
+}
+
+.skeletonTrack {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--slide-gap);
+  padding-block: 12px;
+  overflow: hidden;
+}
+
+.skeletonTicket {
+  flex: 0 0 var(--slide-w);
+  min-height: 247px;
+  justify-content: space-between;
+  animation: none;
+}
+
+.skeletonTicket[data-side='true'] {
+  transform: scale(var(--side-scale));
+}
+
+.skeletonTicket[data-side='true']:first-child {
+  transform-origin: right center;
+}
+
+.skeletonTicket[data-side='true']:last-child {
+  transform-origin: left center;
+}
+
+/* The real carousel takes over from the placeholder with a soft fade. */
+.carousel:not(.skeleton) {
+  animation: carousel-in var(--duration-slow) var(--ease-out) both;
+}
+
+@keyframes carousel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
 }
 
 @media (max-width: 600px) {

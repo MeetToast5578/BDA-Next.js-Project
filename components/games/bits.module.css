@@ -64,7 +64,16 @@
   height: 100%;
   border-radius: inherit;
   background: var(--progress-fill, var(--color-success));
-  transition: width 0.3s ease;
+  transform-origin: left center;
+  transition: width 0.5s var(--ease-out);
+  animation: fill-in 0.9s var(--ease-out) 0.15s backwards;
+}
+
+/* Bars fill up from empty as they appear. */
+@keyframes fill-in {
+  from {
+    transform: scaleX(0);
+  }
 }
 
 /* Avatars */

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
 
 import { apiError } from '@/lib/api-response'
 import { invalidateGamesCache } from '@/lib/cache-tags'
@@ -16,22 +16,19 @@ const LEAVE_ERRORS: Record<LeaveErrorCode, { status: number; message: string }> 
  * "Oyundan çıx". Requires a signed-in user, and gives their spot back to the game. Allowed right up
  * to kick-off; the host leaves by deleting the game instead.
  */
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const gameId = Number((await params).id)
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null
   const payload = await getPayloadClient()
 
   if (!Number.isSafeInteger(gameId) || gameId <= 0) {
-    await recordJoinAttempt(payload, { outcome: 'INVALID_REQUEST', gameId: null, userId: null, ip })
+    after(() => recordJoinAttempt(payload, { outcome: 'INVALID_REQUEST', gameId: null, userId: null, ip }))
     return apiError('INVALID_GAME_ID', 'Oyun ID-si yanlışdır.', 400)
   }
 
   const { user } = await payload.auth({ headers: request.headers })
   if (!user) {
-    await recordJoinAttempt(payload, { outcome: 'UNAUTHENTICATED', gameId, userId: null, ip })
+    after(() => recordJoinAttempt(payload, { outcome: 'UNAUTHENTICATED', gameId, userId: null, ip }))
     return apiError('UNAUTHENTICATED', 'Oyundan çıxmaq üçün daxil olun.', 401)
   }
   const userId = Number(user.id)
@@ -40,13 +37,15 @@ export async function POST(
     const result = await releaseSpot(payload, gameId, userId)
 
     if (!result.ok) {
-      await recordJoinAttempt(payload, { outcome: result.code, gameId, userId, ip })
+      after(() => recordJoinAttempt(payload, { outcome: result.code, gameId, userId, ip }))
       const { status, message } = LEAVE_ERRORS[result.code]
       return apiError(result.code, message, status)
     }
 
     invalidateGamesCache()
-    await recordJoinAttempt(payload, { outcome: 'LEFT', gameId, userId, remainingSpots: result.remainingSpots, ip })
+    after(() =>
+      recordJoinAttempt(payload, { outcome: 'LEFT', gameId, userId, remainingSpots: result.remainingSpots, ip }),
+    )
 
     // The spot is already released, so a failure loading the detail must not turn this into an error.
     const game = await getGameDetail(gameId, userId).catch((error) => {
@@ -64,7 +63,7 @@ export async function POST(
     })
   } catch (error) {
     console.error(error)
-    await recordJoinAttempt(payload, { outcome: 'ERROR', gameId, userId, ip })
+    after(() => recordJoinAttempt(payload, { outcome: 'ERROR', gameId, userId, ip }))
     return apiError('INTERNAL_ERROR', 'Hazırda oyundan çıxmaq mümkün olmadı.', 500)
   }
 }

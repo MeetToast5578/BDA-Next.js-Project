@@ -1,30 +1,99 @@
-import Image from 'next/image'
+import type { ReactNode } from 'react'
 
-// Icons exported from the Figma file, at their designed sizes.
+type IconDef = { width: number; height: number; color: string; body: ReactNode }
+
+// Icons exported from the Figma file, at their designed sizes. Inlined rather than loaded as <img>,
+// so they paint with the text instead of popping in after it and cost no extra request each.
 const ICONS = {
-  pin: { src: '/icons/pin.svg', width: 10.5, height: 13.97 },
-  calendar: { src: '/icons/calendar.svg', width: 12.25, height: 14 },
-  clock: { src: '/icons/clock.svg', width: 14, height: 14 },
-  arrowRight: { src: '/icons/arrow-right.svg', width: 16, height: 16 },
-  chevron: { src: '/icons/chevron.svg', width: 14.17, height: 23 },
-  close: { src: '/icons/x-circle.svg', width: 14, height: 14 },
-} as const
+  pin: {
+    width: 10.5,
+    height: 13.9727,
+    color: '#464555',
+    body: (
+      <path
+        fill="currentColor"
+        d="M4.59375 13.6445C4.10156 13.043 3.49089 12.2318 2.76172 11.2109V11.2109C2.05078 10.2083 1.42188 9.16927 0.875 8.09375V8.09375C0.328125 7.01823 0.0364583 6.07031 0 5.25C0.0364583 3.75521 0.546875 2.51562 1.53125 1.53125C2.51562 0.546875 3.75521 0.0364583 5.25 0C6.74479 0.0364583 7.98438 0.546875 8.96875 1.53125C9.95312 2.51562 10.4635 3.75521 10.5 5.25C10.4635 6.07031 10.1719 7.01823 9.625 8.09375C9.0599 9.16927 8.42188 10.2083 7.71094 11.2109C7 12.2318 6.39844 13.043 5.90625 13.6445C5.72396 13.8633 5.50521 13.9727 5.25 13.9727C4.99479 13.9727 4.77604 13.8633 4.59375 13.6445V13.6445V13.6445V13.6445M5.25 7C5.74219 6.98177 6.15234 6.80859 6.48047 6.48047V6.48047C6.80859 6.15234 6.98177 5.74219 7 5.25C6.98177 4.75781 6.80859 4.34766 6.48047 4.01953C6.15234 3.69141 5.74219 3.51823 5.25 3.5C4.75781 3.51823 4.34766 3.69141 4.01953 4.01953C3.69141 4.34766 3.51823 4.75781 3.5 5.25C3.51823 5.74219 3.69141 6.15234 4.01953 6.48047C4.34766 6.80859 4.75781 6.98177 5.25 7V7V7"
+      />
+    ),
+  },
+  calendar: {
+    width: 12.25,
+    height: 14,
+    color: '#11111A',
+    body: (
+      <path
+        fill="currentColor"
+        d="M4.15625 1.75H8.09375V0.65625C8.13021 0.255208 8.34896 0.0364583 8.75 0C9.15104 0.0364583 9.36979 0.255208 9.40625 0.65625V1.75H10.5C10.9922 1.76823 11.4023 1.94141 11.7305 2.26953C12.0586 2.59766 12.2318 3.00781 12.25 3.5V12.25C12.2318 12.7422 12.0586 13.1523 11.7305 13.4805C11.4023 13.8086 10.9922 13.9818 10.5 14H1.75C1.25781 13.9818 0.847656 13.8086 0.519531 13.4805C0.191406 13.1523 0.0182292 12.7422 0 12.25V3.5C0.0182292 3.00781 0.191406 2.59766 0.519531 2.26953C0.847656 1.94141 1.25781 1.76823 1.75 1.75H2.84375V0.65625C2.88021 0.255208 3.09896 0.0364583 3.5 0C3.90104 0.0364583 4.11979 0.255208 4.15625 0.65625V1.75V1.75V1.75M1.3125 6.78125H3.5V5.25H1.3125V6.78125V6.78125V6.78125M1.3125 8.09375V9.84375H3.5V8.09375H1.3125V8.09375V8.09375M4.8125 8.09375V9.84375H7.4375V8.09375H4.8125V8.09375V8.09375M8.75 8.09375V9.84375H10.9375V8.09375H8.75V8.09375V8.09375M10.9375 5.25H8.75V6.78125H10.9375V5.25V5.25V5.25M10.9375 11.1562H8.75V12.6875H10.5C10.7734 12.6693 10.9193 12.5234 10.9375 12.25V11.1562V11.1562V11.1562M7.4375 11.1562H4.8125V12.6875H7.4375V11.1562V11.1562V11.1562M3.5 11.1562H1.3125V12.25C1.33073 12.5234 1.47656 12.6693 1.75 12.6875H3.5V11.1562V11.1562V11.1562M7.4375 5.25H4.8125V6.78125H7.4375V5.25V5.25V5.25"
+      />
+    ),
+  },
+  clock: {
+    width: 14,
+    height: 14,
+    color: '#11111A',
+    body: (
+      <path
+        fill="currentColor"
+        d="M6.34375 3.28125C6.38021 2.88021 6.59896 2.66146 7 2.625C7.40104 2.66146 7.61979 2.88021 7.65625 3.28125V6.64453L9.98047 8.20312C10.3086 8.45833 10.3633 8.75911 10.1445 9.10547C9.90755 9.43359 9.61589 9.48828 9.26953 9.26953L6.64453 7.51953C6.44401 7.41016 6.34375 7.22786 6.34375 6.97266V3.28125V3.28125V3.28125M7 0C8.3125 0.0182292 9.48828 0.33724 10.5273 0.957031V0.957031C11.5846 1.57682 12.4232 2.41536 13.043 3.47266V3.47266C13.6628 4.51172 13.9818 5.6875 14 7C13.9818 8.3125 13.6628 9.48828 13.043 10.5273C12.4232 11.5846 11.5846 12.4232 10.5273 13.043C9.48828 13.6628 8.3125 13.9818 7 14C5.6875 13.9818 4.51172 13.6628 3.47266 13.043C2.41536 12.4232 1.57682 11.5846 0.957031 10.5273C0.33724 9.48828 0.0182292 8.3125 0 7C0.0182292 5.6875 0.33724 4.51172 0.957031 3.47266C1.57682 2.41536 2.41536 1.57682 3.47266 0.957031C4.51172 0.33724 5.6875 0.0182292 7 0V0V0M1.3125 7C1.34896 8.60417 1.90495 9.94401 2.98047 11.0195V11.0195C4.05599 12.0951 5.39583 12.651 7 12.6875C8.60417 12.651 9.94401 12.0951 11.0195 11.0195C12.0951 9.94401 12.651 8.60417 12.6875 7C12.651 5.39583 12.0951 4.05599 11.0195 2.98047C9.94401 1.90495 8.60417 1.34896 7 1.3125C5.39583 1.34896 4.05599 1.90495 2.98047 2.98047C1.90495 4.05599 1.34896 5.39583 1.3125 7V7V7"
+      />
+    ),
+  },
+  arrowRight: {
+    width: 16,
+    height: 16,
+    color: '#fff',
+    body: <path fill="currentColor" d="M12.175 9H0V7H12.175L6.575 1.4L8 0L16 8L8 16L6.575 14.6L12.175 9V9" />,
+  },
+  chevron: {
+    width: 14.1716,
+    height: 23,
+    color: '#fff',
+    body: (
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        d="M3.5 1L12.5858 10.0858C13.3668 10.8668 13.3668 12.1332 12.5858 12.9142L3.5 22"
+      />
+    ),
+  },
+  close: {
+    width: 14,
+    height: 14,
+    color: '#0B003A',
+    body: (
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        d="M8.75014 5.24986L5.24986 8.75014M5.24986 5.24986L8.75014 8.75014M12.8338 7C12.8338 10.2219 10.2219 12.8338 7 12.8338C3.77808 12.8338 1.1662 10.2219 1.1662 7C1.1662 3.77808 3.77808 1.1662 7 1.1662C10.2219 1.1662 12.8338 3.77808 12.8338 7Z"
+      />
+    ),
+  },
+} satisfies Record<string, IconDef>
 
 export type IconName = keyof typeof ICONS
 
 /**
- * Decorative icon; the surrounding text carries the meaning. The box has the exact (often fractional)
- * Figma size and the SVG fills it, since next/image's width/height attributes must be integers.
+ * Decorative icon; the surrounding text carries the meaning. The `color` attribute is only a
+ * default: a stylesheet `color` on the icon or its class overrides it.
  */
 export function Icon({ name, className }: { name: IconName; className?: string }) {
-  const { src, width, height } = ICONS[name]
+  const { width, height, color, body } = ICONS[name]
   return (
-    <span
+    <svg
       aria-hidden="true"
+      focusable="false"
       className={className}
-      style={{ position: 'relative', display: 'inline-block', width, height, flexShrink: 0 }}
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      color={color}
+      style={{ display: 'inline-block', flexShrink: 0, overflow: 'visible' }}
     >
-      <Image src={src} alt="" fill sizes={`${Math.ceil(width)}px`} unoptimized />
-    </span>
+      {body}
+    </svg>
   )
 }

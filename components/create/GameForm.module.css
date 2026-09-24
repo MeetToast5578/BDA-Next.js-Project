@@ -72,13 +72,6 @@
   background: var(--color-surface);
 }
 
-.sectionTitle {
-  font-family: var(--font-display);
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--color-heading);
-}
-
 /* Sport and level pickers: radio inputs styled as cards / segments. */
 .choices {
   display: grid;
@@ -104,11 +97,18 @@
   transition:
     border-color 0.15s ease,
     background-color 0.15s ease,
-    box-shadow 0.15s ease;
+    box-shadow 0.15s ease,
+    color 0.15s ease,
+    transform 0.2s var(--ease-out);
 }
 
 .choice:hover {
   border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+  transform: translateY(-1px);
+}
+
+.choice:active {
+  transform: scale(0.98);
 }
 
 .choice input {
@@ -135,6 +135,16 @@
 .emoji {
   font-size: 26px;
   line-height: 1.2;
+}
+
+.choice:has(input:checked) .emoji {
+  animation: hop 0.45s var(--ease-spring);
+}
+
+@keyframes hop {
+  40% {
+    transform: translateY(-5px) scale(1.15);
+  }
 }
 
 .choiceLabel {
@@ -188,10 +198,17 @@
   font-weight: 600;
   line-height: 1;
   color: var(--color-primary);
+  transition:
+    background-color 0.15s ease,
+    transform 0.12s ease;
 }
 
 .stepButton:hover:not(:disabled) {
   background: var(--color-primary-border-soft);
+}
+
+.stepButton:active:not(:disabled) {
+  transform: scale(0.9);
 }
 
 .stepButton:disabled {
@@ -293,6 +310,15 @@
   background: var(--color-surface);
   box-shadow: 0 16px 32px -12px rgba(20, 27, 43, 0.25);
   list-style: none;
+  transform-origin: top center;
+  animation: drop 0.18s var(--ease-out);
+}
+
+@keyframes drop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
 }
 
 .option {

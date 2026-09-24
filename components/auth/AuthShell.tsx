@@ -1,4 +1,4 @@
- import styles from './Auth.module.css'
+import styles from './Auth.module.css'
 
 function GoogleIcon() {
   // Google "G" mark (the flat-color-icons:google glyph used in the design).
@@ -24,19 +24,40 @@ function GoogleIcon() {
   )
 }
 
+/** "Google ilə davam et". A plain link: the OAuth flow is a full-page redirect. */
+export function GoogleButton({ href }: { href: string }) {
+  return (
+    <a href={href} className={`${styles.google} reveal`}>
+      <GoogleIcon />
+      Google ilə davam et
+    </a>
+  )
+}
+
+export function GoogleUnavailable({ children }: { children: React.ReactNode }) {
+  return (
+    <p className={styles.unavailable} role="alert">
+      {children}
+    </p>
+  )
+}
+
+/** Holds the button's place while the page decides where "Google ilə davam et" should return to. */
+export function GoogleButtonSkeleton() {
+  return <span className={`skeleton skeleton-on-dark ${styles.googleSkeleton}`} aria-hidden="true" />
+}
+
+/** The branded auth page. `children` is the sign-in action: the Google button or why it is missing. */
 export function AuthShell({
   eyebrow,
   title,
   description,
-  googleHref,
-  unavailableNote,
+  children,
 }: {
   eyebrow?: string
   title: string
   description: string
-  /** Omitted when Google sign-in isn't configured; `unavailableNote` is then shown instead. */
-  googleHref?: string
-  unavailableNote: string
+  children: React.ReactNode
 }) {
   return (
     <section className={styles.shell} aria-labelledby="auth-title">
@@ -50,18 +71,7 @@ export function AuthShell({
           </h1>
           <p className={styles.description}>{description}</p>
         </div>
-
-        {googleHref ? (
-          // A plain link: the OAuth flow is a full-page redirect.
-          <a href={googleHref} className={styles.google}>
-            <GoogleIcon />
-            Google ilə davam et
-          </a>
-        ) : (
-          <p className={styles.unavailable} role="alert">
-            {unavailableNote}
-          </p>
-        )}
+        {children}
       </div>
     </section>
   )

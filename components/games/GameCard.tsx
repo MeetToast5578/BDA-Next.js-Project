@@ -93,9 +93,12 @@ export function GameCard({
           </div>
           <div className={styles.action}>
             {game.status === 'open' ? (
+              // Not prefetched: the title link already prefetches this game, and for a signed-out
+              // visitor ?join=1 is a redirect to /login (proxy.ts) that isn't worth fetching ahead.
               <Link
                 href={`${href}?join=1`}
-                className={buttonClass('primary', 'sm')}
+                prefetch={false}
+                className={buttonClass('primary', 'sm', { className: styles.join })}
                 aria-label={`${game.title} oyununa qoşul`}
               >
                 Qoşul

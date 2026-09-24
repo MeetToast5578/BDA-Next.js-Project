@@ -264,8 +264,10 @@ const Ticket = memo(function Ticket({ game, clone }: { game: FeaturedGame; clone
             moreStyle={{ bg: '#cee9d9', color: '#082016' }}
             label="İştirakçılar"
           />
+          {/* Not prefetched, like the "Qoşul" on game cards: the title link already covers this game. */}
           <Link
             href={`${href}?join=1`}
+            prefetch={false}
             className={buttonClass('white', 'md', { className: styles.join })}
             aria-label={`${game.title} oyununa qoşul`}
             tabIndex={tabIndex}

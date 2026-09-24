@@ -8,6 +8,22 @@
   backdrop-filter: saturate(160%) blur(12px);
 }
 
+/* Lifts off the page once it starts scrolling. Driven by the scroll position itself, no script. */
+@supports (animation-timeline: scroll()) {
+  .header {
+    animation: header-lift linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0 64px;
+  }
+}
+
+@keyframes header-lift {
+  to {
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 8px 24px -16px rgba(20, 27, 43, 0.35);
+  }
+}
+
 .nav {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -39,6 +55,11 @@
   height: 9px;
   border-radius: 50%;
   background: var(--color-accent);
+  transition: transform 0.3s var(--ease-spring);
+}
+
+.logo:hover .dot {
+  transform: scale(1.5);
 }
 
 .links {
@@ -83,6 +104,143 @@
   gap: 16px;
 }
 
+.session {
+  display: contents;
+}
+
+/* Mobile menu: hidden on wide screens, where everything fits in the bar. */
+.menuButton {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--color-ink);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-ink);
+  transition: background-color 0.15s ease;
+}
+
+.menuButton:hover {
+  background: rgba(20, 27, 43, 0.06);
+}
+
+.menuIcon {
+  position: relative;
+  display: block;
+  width: 18px;
+  height: 12px;
+}
+
+.menuIcon > span {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  transition:
+    transform 0.25s var(--ease-out),
+    opacity 0.2s ease,
+    top 0.25s var(--ease-out);
+}
+
+.menuIcon > span:nth-child(1) {
+  top: 0;
+}
+
+.menuIcon > span:nth-child(2) {
+  top: 5px;
+}
+
+.menuIcon > span:nth-child(3) {
+  top: 10px;
+}
+
+.menuIcon[data-open] > span:nth-child(1) {
+  top: 5px;
+  transform: rotate(45deg);
+}
+
+.menuIcon[data-open] > span:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0);
+}
+
+.menuIcon[data-open] > span:nth-child(3) {
+  top: 5px;
+  transform: rotate(-45deg);
+}
+
+/* A sheet that drops down from under the header. */
+.menuPanel {
+  position: fixed;
+  inset: var(--header-height) 0 auto;
+  width: auto;
+  margin: 0;
+  padding: 12px var(--gutter) 20px;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: inherit;
+  box-shadow: 0 24px 40px -24px rgba(20, 27, 43, 0.35);
+  opacity: 0;
+  transform: translateY(-8px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.25s var(--ease-out),
+    overlay 0.25s allow-discrete,
+    display 0.25s allow-discrete;
+}
+
+.menuPanel:popover-open {
+  opacity: 1;
+  transform: none;
+}
+
+@starting-style {
+  .menuPanel:popover-open {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.menuPanel::backdrop {
+  background: rgba(11, 0, 58, 0.18);
+}
+
+.menuLinks {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.menuLink {
+  display: block;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--color-chip);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.menuLink:hover {
+  color: var(--color-primary);
+}
+
+.menuSession {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 16px;
+}
+
 .user {
   display: flex;
   align-items: center;
@@ -121,7 +279,23 @@
     grid-template-columns: 1fr auto;
   }
 
-  .links {
+  .links,
+  .session {
+    display: none;
+  }
+
+  .menuButton {
+    display: inline-flex;
+  }
+
+  .actions {
+    gap: 10px;
+  }
+}
+
+/* The menu's copy of the session actions only shows in the menu. */
+@media (min-width: 860px) {
+  .menuPanel {
     display: none;
   }
 }
@@ -135,13 +309,13 @@
     gap: 8px;
   }
 
-  .actions a,
-  .actions button {
-    padding-inline: 12px;
+  .create {
+    padding-inline: 14px;
     font-size: 13.5px;
   }
+}
 
-  .user .avatar {
-    display: none;
-  }
+/* In the menu there is room for the name the bar hides on narrow screens. */
+.menuSession .userName {
+  display: inline;
 }

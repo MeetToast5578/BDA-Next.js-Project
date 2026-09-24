@@ -28,10 +28,27 @@
   text-underline-offset: 3px;
 }
 
+.back > span {
+  transition: transform 0.2s var(--ease-out);
+}
+
+.back:hover > span {
+  transform: translateX(-3px);
+}
+
 .games {
   display: flex;
   flex-direction: column;
   gap: 28px;
+  transition:
+    opacity 0.2s ease,
+    filter 0.2s ease;
+}
+
+/* A sport tab was chosen and its games are on the way: fade the old ones back. */
+.section:has(nav[data-pending]) .games {
+  opacity: 0.45;
+  filter: saturate(0.6);
 }
 
 .head {
@@ -86,6 +103,14 @@
 .seeAll:hover {
   text-decoration: underline;
   text-underline-offset: 4px;
+}
+
+.seeAll > span {
+  transition: transform 0.2s var(--ease-out);
+}
+
+.seeAll:hover > span {
+  transform: translateX(3px);
 }
 
 @media (max-width: 600px) {

@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useState, useTransition } from 'react'
 
 import { ApiError, postJson } from '@/lib/api-client'
 import type { CurrentUser, GameDetail } from '@/lib/api-types'
@@ -45,6 +45,10 @@ export function JoinPanel({ game, user, autoOpen }: { game: GameDetail; user: Cu
   const [errors, setErrors] = useState<{ name?: string; phone?: string }>({})
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  // Set the moment the join succeeds, so the button can't be pressed again while the page refreshes.
+  const [justJoined, setJustJoined] = useState(false)
+  const [, startRefresh] = useTransition()
+  const joined = game.viewer.joined || justJoined
 
   // Drop ?join=1 so a reload doesn't reopen the modal.
   useEffect(() => {
@@ -90,8 +94,10 @@ export function JoinPanel({ game, user, autoOpen }: { game: GameDetail; user: Cu
         name: name.trim(),
         phone: normalizePhone(`${PHONE_PREFIX}${phone}`),
       })
+      setJustJoined(true)
       setOpen(false)
-      router.refresh()
+      // Brings in the new player count and the host's phone, which only joined players see.
+      startRefresh(() => router.refresh())
     } catch (err) {
       if (!(err instanceof ApiError)) {
         setError('Hazırda oyuna qoşulmaq mümkün olmadı.')
@@ -122,9 +128,9 @@ export function JoinPanel({ game, user, autoOpen }: { game: GameDetail; user: Cu
     <>
       {game.viewer.isHost ? (
         <p className={styles.state}>Bu oyunun hostu sizsiniz</p>
-      ) : game.viewer.joined ? (
-        <p className={`${styles.state} ${styles.joined}`}>
-          <span className={styles.check} aria-hidden="true">
+      ) : joined ? (
+        <p className={`${styles.state} ${styles.joined}`} role={justJoined ? 'status' : undefined}>
+          <span className={`${styles.check} ${justJoined ? styles.checkPop : ''}`} aria-hidden="true">
             ✓
           </span>
           Siz bu oyuna qoşulmusunuz
@@ -134,15 +140,18 @@ export function JoinPanel({ game, user, autoOpen }: { game: GameDetail; user: Cu
           {STATUS_LABELS[game.status]}
         </button>
       ) : (
-        <button
-          type="button"
-          className={buttonClass('primary', 'lg', { block: true, className: styles.cta })}
-          onClick={openModal}
-          aria-haspopup="dialog"
-        >
-          Qoşul - {game.remainingSpots} yer qalıb
-          <Icon name="arrowRight" />
-        </button>
+        // On phones this docks to the bottom of the screen, so joining never needs a scroll.
+        <div className={styles.dock} data-join-dock>
+          <button
+            type="button"
+            className={buttonClass('primary', 'lg', { block: true, className: styles.cta })}
+            onClick={openModal}
+            aria-haspopup="dialog"
+          >
+            Qoşul - {game.remainingSpots} yer qalıb
+            <Icon name="arrowRight" className={styles.ctaArrow} />
+          </button>
+        </div>
       )}
 
       <Modal

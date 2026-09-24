@@ -15,11 +15,13 @@
     border-color 0.15s ease,
     color 0.15s ease,
     opacity 0.15s ease,
-    transform 0.15s ease;
+    box-shadow 0.2s ease,
+    transform 0.2s var(--ease-out);
 }
 
 .button:active:not(:disabled) {
-  transform: translateY(1px);
+  transform: translateY(1px) scale(0.98);
+  transition-duration: 0.08s;
 }
 
 .button:disabled,
@@ -68,16 +70,10 @@
 
 .primary:hover:not(:disabled) {
   background: var(--color-primary-hover);
-}
-
-.dark {
-  background: var(--color-ink);
-  color: #fff;
-  font-weight: 500;
-}
-
-.dark:hover:not(:disabled) {
-  background: var(--color-ink-hover);
+  box-shadow:
+    0 10px 20px -8px color-mix(in srgb, var(--color-primary) 55%, transparent),
+    0 2px 4px -2px color-mix(in srgb, var(--color-primary) 20%, transparent);
+  transform: translateY(-1px);
 }
 
 .outlineDark {
@@ -107,6 +103,8 @@
 
 .accent:hover:not(:disabled) {
   background: var(--color-accent-hover);
+  box-shadow: 0 10px 22px -10px color-mix(in srgb, var(--color-accent) 80%, transparent);
+  transform: translateY(-1px);
 }
 
 .outlineLight {
@@ -129,15 +127,6 @@
   background: var(--color-primary-soft);
 }
 
-.ghost {
-  background: transparent;
-  color: var(--color-ink);
-}
-
-.ghost:hover:not(:disabled) {
-  background: rgba(20, 27, 43, 0.06);
-}
-
 .muted {
   background: var(--color-chip);
   color: var(--color-muted);
@@ -152,15 +141,4 @@
 
 .danger:hover:not(:disabled) {
   background: color-mix(in srgb, var(--color-danger) 85%, #000);
-}
-
-.outlineDanger {
-  border: 1px solid var(--color-danger);
-  background: transparent;
-  color: var(--color-danger);
-  box-shadow: none;
-}
-
-.outlineDanger:hover:not(:disabled) {
-  background: var(--color-danger-tint);
 }

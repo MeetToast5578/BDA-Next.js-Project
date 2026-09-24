@@ -240,13 +240,21 @@ export async function getFeaturedGames(city: string, limit: number, now = Date.n
 /**
  * The "Oyun Detalı" page. Not cached: `viewer` and the host's phone depend on who is asking.
  * The phone is only revealed to players who joined and to the host.
+ *
+ * `viewerId` may still be resolving (the page's session lookup): only the "has this viewer joined"
+ * check waits for it, so the game itself is read in parallel with the session.
  */
-export async function getGameDetail(gameId: number, viewerId: number | null, now = Date.now()) {
+export async function getGameDetail(
+  gameId: number,
+  viewerId: number | null | Promise<number | null>,
+  now = Date.now(),
+) {
   const payload = await getPayloadClient()
+  const viewer = Promise.resolve(viewerId)
 
   // All three only need `gameId`, so they go out together: against a remote database each extra
   // sequential round trip costs a full network latency.
-  const [doc, previews, joined] = await Promise.all([
+  const [doc, previews, [resolvedViewerId, joined]] = await Promise.all([
     payload.findByID({
       collection: 'games',
       id: gameId,
@@ -257,21 +265,21 @@ export async function getGameDetail(gameId: number, viewerId: number | null, now
       disableErrors: true,
     }),
     findParticipantPreviews(payload, [gameId]),
-    viewerId === null
-      ? false
-      : payload
-          .count({
-            collection: 'game-participants',
-            where: { and: [{ game: { equals: gameId } }, { user: { equals: viewerId } }] },
-            overrideAccess: true,
-          })
-          .then(({ totalDocs }) => totalDocs > 0),
+    viewer.then(async (id) => {
+      if (id === null) return [id, false] as const
+      const { totalDocs } = await payload.count({
+        collection: 'game-participants',
+        where: { and: [{ game: { equals: gameId } }, { user: { equals: id } }] },
+        overrideAccess: true,
+      })
+      return [id, totalDocs > 0] as const
+    }),
   ])
   if (!doc) return null
 
   const game = normalizeGameRecord(doc, now)
   const hostId = typeof doc.host === 'object' ? doc.host?.id : doc.host
-  const isHost = viewerId !== null && hostId === viewerId
+  const isHost = resolvedViewerId !== null && hostId === resolvedViewerId
 
   return {
     ...toGameCard(game),
