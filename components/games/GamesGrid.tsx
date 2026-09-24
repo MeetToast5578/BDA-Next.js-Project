@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, type CSSProperties } from 'react'
 
 import { apiFetch, withQuery } from '@/lib/api-client'
 import type { GameListResponse } from '@/lib/api-types'
@@ -90,7 +90,8 @@ export function GamesGrid({
     <div className={styles.wrapper} ref={wrapper}>
       <ul className={styles.grid}>
         {shown.map((game, index) => (
-          <li key={game.id}>
+          // Each batch ("Daha çox" adds one) staggers in from its own first card.
+          <li key={game.id} className="reveal" style={{ '--i': index % step } as CSSProperties}>
             <GameCard game={game} priority={index < 3} headingLevel={cardHeadingLevel} />
           </li>
         ))}

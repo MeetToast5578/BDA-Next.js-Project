@@ -6,7 +6,15 @@ import { Avatar } from '@/components/games/bits'
 import { buttonClass } from '@/components/ui/button'
 import styles from './Header.module.css'
 import { LogoutButton } from './LogoutButton'
+import { MobileMenu } from './MobileMenu'
 import { NavLink } from './NavLink'
+
+const MENU_LINKS = [
+  { href: '/games', label: 'Açıq oyunlar' },
+  { href: '/about', label: 'Haqqımızda' },
+  { href: '/rules', label: 'Qaydalar' },
+  { href: '/contact', label: 'Əlaqə' },
+]
 
 function Logo({ className }: { className?: string }) {
   return (
@@ -78,12 +86,30 @@ export function Header() {
         </ul>
 
         <div className={styles.actions}>
-          <Suspense fallback={<SessionActionsFallback />}>
-            <SessionActions />
-          </Suspense>
-          <Link href="/games/new" className={buttonClass('primary', 'md')}>
+          <div className={styles.session}>
+            <Suspense fallback={<SessionActionsFallback />}>
+              <SessionActions />
+            </Suspense>
+          </div>
+          <Link href="/games/new" className={buttonClass('primary', 'md', { className: styles.create })}>
             Oyun yarat
           </Link>
+          <MobileMenu>
+            <ul className={styles.menuLinks}>
+              {MENU_LINKS.map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href} className={styles.menuLink}>
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <div className={styles.menuSession}>
+              <Suspense fallback={<SessionActionsFallback />}>
+                <SessionActions />
+              </Suspense>
+            </div>
+          </MobileMenu>
         </div>
       </nav>
     </header>

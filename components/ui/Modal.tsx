@@ -54,22 +54,21 @@ export function Modal({
         if (event.target === event.currentTarget) onClose()
       }}
     >
-      {open && (
-        <div className={styles.card}>
-          <div className={styles.top}>
-            <button type="button" className={styles.close} onClick={onClose} aria-label="Bağla">
-              <Icon name="close" />
-            </button>
-          </div>
-          <div className={styles.heading}>
-            <h2 id={titleId} className={styles.title}>
-              {title}
-            </h2>
-            {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
-          </div>
-          {children}
+      {/* Stays mounted while closed (the browser hides a closed <dialog>), so it can animate out. */}
+      <div className={styles.card}>
+        <div className={styles.top}>
+          <button type="button" className={styles.close} onClick={onClose} aria-label="Bağla">
+            <Icon name="close" />
+          </button>
         </div>
-      )}
+        <div className={styles.heading}>
+          <h2 id={titleId} className={styles.title}>
+            {title}
+          </h2>
+          {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
+        </div>
+        {children}
+      </div>
     </dialog>
   )
 }

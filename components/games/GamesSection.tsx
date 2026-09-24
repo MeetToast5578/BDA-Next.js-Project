@@ -8,6 +8,15 @@ import styles from './GamesSection.module.css'
 import { SPORT_LABELS } from './sports'
 import { SportTabs } from './SportTabs'
 
+/** "← Ana səhifəyə qayıt" above the "Bütün oyunlar" title (and in its loading placeholder). */
+export function BackHomeLink() {
+  return (
+    <Link href="/" className={styles.back}>
+      <span aria-hidden="true">←</span> Ana səhifəyə qayıt
+    </Link>
+  )
+}
+
 /**
  * Sport tabs, filter summary and the game grid; shared by the homepage and "Bütün oyunlar".
  * With `titleLevel="h1"` it is a page of its own: a "← Ana səhifəyə qayıt" link and the title come
@@ -39,11 +48,7 @@ export function GamesSection({
   const Heading = titleLevel
   const standalone = titleLevel === 'h1'
   const filterLabel = sport ? SPORT_LABELS[sport] : 'Bütün idman növləri'
-  const homeLink = (
-    <Link href="/" className={styles.back}>
-      <span aria-hidden="true">←</span> Ana səhifəyə qayıt
-    </Link>
-  )
+  const homeLink = <BackHomeLink />
 
   const head = (
     <div className={styles.head}>

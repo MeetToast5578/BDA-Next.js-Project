@@ -9,20 +9,55 @@
   color: inherit;
 }
 
-.dialog::backdrop {
-  background: color-mix(in srgb, var(--color-primary-night) 45%, transparent);
-  -webkit-backdrop-filter: blur(2px);
-  backdrop-filter: blur(2px);
+/*
+ * Opening and closing both animate: `display` and `overlay` are held for the length of the
+ * transition so the dialog stays in the top layer while it fades out, and @starting-style gives the
+ * opening its "from" state. Browsers without these just show and hide it instantly.
+ */
+.dialog {
+  opacity: 0;
+  transform: translateY(12px) scale(0.97);
+  transition:
+    opacity 0.2s ease,
+    transform 0.28s var(--ease-out),
+    overlay 0.28s allow-discrete,
+    display 0.28s allow-discrete;
 }
 
 .dialog[open] {
-  animation: pop 0.2s ease-out;
+  opacity: 1;
+  transform: none;
 }
 
-@keyframes pop {
-  from {
+@starting-style {
+  .dialog[open] {
     opacity: 0;
-    transform: translateY(8px) scale(0.98);
+    transform: translateY(12px) scale(0.97);
+  }
+}
+
+.dialog::backdrop {
+  background: transparent;
+  -webkit-backdrop-filter: blur(0);
+  backdrop-filter: blur(0);
+  transition:
+    background-color 0.28s ease,
+    backdrop-filter 0.28s ease,
+    overlay 0.28s allow-discrete,
+    display 0.28s allow-discrete;
+}
+
+.dialog[open]::backdrop {
+  background: color-mix(in srgb, var(--color-primary-night) 45%, transparent);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+
+@starting-style {
+  .dialog[open]::backdrop {
+    background: transparent;
+    -webkit-backdrop-filter: blur(0);
+    backdrop-filter: blur(0);
   }
 }
 
@@ -52,11 +87,14 @@
   border: 0;
   border-radius: 18px;
   background: var(--color-primary-tint);
-  transition: background-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    transform 0.25s var(--ease-out);
 }
 
 .close:hover {
   background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  transform: rotate(90deg);
 }
 
 .heading {

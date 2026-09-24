@@ -205,6 +205,11 @@
   .aside {
     position: static;
   }
+
+  /* Room for the docked join button, so it never covers the end of the page. */
+  .page:has([data-join-dock]) {
+    padding-bottom: 120px;
+  }
 }
 
 @media (max-width: 600px) {

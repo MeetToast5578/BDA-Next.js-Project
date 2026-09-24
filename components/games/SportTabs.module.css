@@ -8,6 +8,7 @@
 }
 
 .tab {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -22,12 +23,19 @@
   transition:
     border-color 0.15s ease,
     background-color 0.15s ease,
-    box-shadow 0.15s ease;
+    box-shadow 0.2s ease,
+    transform 0.2s var(--ease-out);
 }
 
 .tab:hover {
   border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
-  box-shadow: 0 6px 16px -10px color-mix(in srgb, var(--color-primary) 35%, transparent);
+  box-shadow: 0 10px 22px -14px color-mix(in srgb, var(--color-primary) 55%, transparent);
+  transform: translateY(-2px);
+}
+
+.tab:active {
+  transform: translateY(0) scale(0.98);
+  transition-duration: 0.08s;
 }
 
 .active,
@@ -41,6 +49,40 @@
 .emoji {
   font-size: 26px;
   line-height: 1.2;
+  transition: transform 0.3s var(--ease-spring);
+}
+
+.tab:hover .emoji {
+  transform: scale(1.12) rotate(-6deg);
+}
+
+.active .emoji {
+  animation: hop 0.5s var(--ease-spring);
+}
+
+@keyframes hop {
+  40% {
+    transform: translateY(-5px) scale(1.15);
+  }
+}
+
+/* Shown on the chosen tab while its games load. */
+.spinner {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .label {

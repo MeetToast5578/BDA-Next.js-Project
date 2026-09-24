@@ -100,6 +100,17 @@
   --shadow-modal: 0 16px 20px rgba(18, 41, 31, 0.12);
   --focus-ring: var(--color-primary);
   --focus-ring-on-dark: #ffd48a;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast: 150ms;
+  --duration-base: 240ms;
+  --duration-slow: 420ms;
+
+  /* Skeletons */
+  --skeleton-base: color-mix(in srgb, var(--color-primary) 6%, #eef0f4);
+  --skeleton-shine: color-mix(in srgb, var(--color-primary) 2%, #f8f9fb);
 }
 
 *,
@@ -122,6 +133,8 @@ html {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
@@ -238,4 +251,52 @@ html:has(dialog[open]) {
   :root {
     --gutter: 16px;
   }
+}
+
+/*
+ * Shared motion. Keyframes live here rather than in CSS Modules, which would scope their names.
+ * `.reveal` fades content up as it mounts; set `--i` on a list item to stagger it after its siblings.
+ * `.fade` only fades: use it around anything with position: fixed inside, which a transform would
+ * pin to the animating box instead of the viewport. Both leave no styles behind once they finish.
+ */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(var(--rise, 12px));
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.reveal {
+  animation: fade-up var(--duration-slow) var(--ease-out) backwards;
+  animation-delay: calc(min(var(--i, 0), 8) * 55ms);
+}
+
+.fade {
+  animation: fade-in var(--duration-base) ease-out backwards;
+}
+
+/* Placeholder block while content streams in. Size it with width/height or a layout class. */
+.skeleton {
+  display: block;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(100deg, var(--skeleton-base) 30%, var(--skeleton-shine) 50%, var(--skeleton-base) 70%) 0
+    0 / 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-on-dark {
+  --skeleton-base: rgba(255, 255, 255, 0.1);
+  --skeleton-shine: rgba(255, 255, 255, 0.2);
 }

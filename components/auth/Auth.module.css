@@ -29,6 +29,33 @@
   height: 100%;
   background: linear-gradient(to right, var(--color-primary-hover), transparent);
   pointer-events: none;
+  animation: breathe 7s ease-in-out infinite alternate;
+}
+
+@keyframes breathe {
+  to {
+    opacity: 0.55;
+    transform: translateX(-40px);
+  }
+}
+
+.head > * {
+  animation: rise 0.55s var(--ease-out) backwards;
+}
+
+.head > :nth-child(2) {
+  animation-delay: 0.06s;
+}
+
+.head > :nth-child(3) {
+  animation-delay: 0.12s;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
 }
 
 .container {
@@ -91,11 +118,22 @@
   font-size: 15px;
   font-weight: 600;
   color: var(--color-ink);
-  transition: background-color 0.15s ease;
+  box-shadow: 0 10px 24px -12px color-mix(in srgb, var(--color-primary-night) 70%, transparent);
+  transition:
+    background-color 0.15s ease,
+    transform 0.15s ease;
 }
 
 .google:hover {
   background: var(--color-primary-soft);
+}
+
+.google:active {
+  transform: scale(0.985);
+}
+
+.googleSkeleton {
+  height: 46px;
 }
 
 @media (max-width: 600px) {

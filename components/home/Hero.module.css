@@ -7,6 +7,43 @@
   color: #fff;
 }
 
+/*
+ * Two soft blooms drifting slowly behind the content. Only `transform` animates, so it stays on the
+ * compositor and costs no layout or paint.
+ */
+.hero::before,
+.hero::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  width: 560px;
+  height: 560px;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(40px);
+  opacity: 0.55;
+}
+
+.hero::before {
+  top: -220px;
+  left: -160px;
+  background: radial-gradient(circle, color-mix(in srgb, #7b6cff 70%, transparent), transparent 65%);
+  animation: drift 18s ease-in-out infinite alternate;
+}
+
+.hero::after {
+  right: -200px;
+  bottom: 120px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-accent) 45%, transparent), transparent 65%);
+  animation: drift 22s ease-in-out -6s infinite alternate-reverse;
+}
+
+@keyframes drift {
+  to {
+    transform: translate(140px, 80px) scale(1.15);
+  }
+}
+
 /* 12-column / 100px grid of 1px white lines at 6% opacity. */
 .grid {
   position: absolute;
@@ -24,6 +61,7 @@
 
 .content {
   position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -80,6 +118,40 @@
   flex-wrap: wrap;
   justify-content: center;
   gap: 24px;
+}
+
+/* The copy rises in one line after another on first paint. */
+.content > * {
+  animation: rise 0.6s var(--ease-out) backwards;
+}
+
+.content > :nth-child(2) {
+  animation-delay: 0.06s;
+}
+
+.content > :nth-child(3) {
+  animation-delay: 0.12s;
+}
+
+.content > :nth-child(4) {
+  animation-delay: 0.18s;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+.eyebrowDot {
+  animation: pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-accent) 25%, transparent);
+  }
 }
 
 @media (max-width: 600px) {

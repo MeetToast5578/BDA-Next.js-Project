@@ -2,6 +2,7 @@ import { connection } from 'next/server'
 import { Suspense } from 'react'
 
 import { GamesSection } from '@/components/games/GamesSection'
+import { GamesSectionSkeleton, TicketCarouselSkeleton } from '@/components/games/skeletons'
 import { Hero } from '@/components/home/Hero'
 import { TicketCarousel } from '@/components/home/TicketCarousel'
 import { DEFAULT_CITY, FEATURED_LIMIT } from '@/lib/game-backend'
@@ -11,6 +12,8 @@ import { loadGameList, sportFromSearchParams } from '@/lib/page-data'
 const GAMES_ANCHOR = 'oyunlar'
 /** One row of three cards; "Daha çox" reveals three more at a time. */
 const HOME_PAGE_SIZE = 3
+const GAMES_EYEBROW = 'Açıq oyunlar'
+const GAMES_TITLE = 'Bu gün və sabah üçün qoşula biləcəyin oyunlar'
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>
 
@@ -31,8 +34,8 @@ async function OpenGames({ searchParams }: { searchParams: SearchParams }) {
   return (
     <GamesSection
       id={GAMES_ANCHOR}
-      eyebrow="Açıq oyunlar"
-      title="Bu gün və sabah üçün qoşula biləcəyin oyunlar"
+      eyebrow={GAMES_EYEBROW}
+      title={GAMES_TITLE}
       sports={sports}
       sport={sport}
       basePath="/"
@@ -48,13 +51,17 @@ export default function HomePage({ searchParams }: { searchParams: SearchParams 
       <Hero
         gamesAnchor={GAMES_ANCHOR}
         carousel={
-          <Suspense fallback={null}>
+          <Suspense fallback={<TicketCarouselSkeleton />}>
             <FeaturedCarousel />
           </Suspense>
         }
       />
-      {/* Reserves the section's height so the footer does not jump when the grid arrives. */}
-      <Suspense fallback={<div id={GAMES_ANCHOR} style={{ minHeight: '60vh' }} />}>
+      {/* Placeholders shaped like the real sections, so nothing jumps when the data arrives. */}
+      <Suspense
+        fallback={
+          <GamesSectionSkeleton id={GAMES_ANCHOR} eyebrow={GAMES_EYEBROW} title={GAMES_TITLE} cards={HOME_PAGE_SIZE} />
+        }
+      >
         <OpenGames searchParams={searchParams} />
       </Suspense>
     </>

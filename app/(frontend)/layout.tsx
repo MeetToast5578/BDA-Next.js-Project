@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import { Inter, Space_Grotesk } from 'next/font/google'
-import React from 'react'
+import React, { Suspense } from 'react'
 
 import { Footer } from '@/components/site/Footer'
 import { Header } from '@/components/site/Header'
+import { NavigationProgress } from '@/components/site/NavigationProgress'
 import './globals.css'
 
 const spaceGrotesk = Space_Grotesk({
@@ -31,6 +32,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="az" data-scroll-behavior="smooth" className={`${spaceGrotesk.variable} ${inter.variable}`}>
       <body>
+        {/* It reads the URL, which a prerender doesn't have; the bar simply starts after hydration. */}
+        <Suspense fallback={null}>
+          <NavigationProgress />
+        </Suspense>
         <a href="#main" className="skip-link">
           Məzmuna keç
         </a>
