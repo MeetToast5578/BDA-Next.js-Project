@@ -173,6 +173,17 @@
   color: var(--color-heading);
 }
 
+/* The host's name opens their profile. */
+.hostLink {
+  border-radius: 4px;
+}
+
+.hostLink:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .hostNote {
   max-width: 393px;
   font-size: 12.5px;
