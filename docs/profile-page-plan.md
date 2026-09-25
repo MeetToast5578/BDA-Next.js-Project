@@ -9,6 +9,27 @@ be uploaded.
 There is no Figma frame for these screens. The design below reuses layouts, classes and tokens that
 already exist on other pages, so the profile pages look like they belong to the same site.
 
+## Status
+
+Phases 0–7 are implemented, one commit per phase. What is still open:
+
+- **T7.3 copy review:** every new Azerbaijani string still needs a native speaker's read.
+- **T4.5 skipped:** `next/cache` refuses to run outside Next, so a cached `getPublicProfile` would break
+  the database tests that call it directly. It is two small queries, and `getGameDetail` isn't cached
+  either.
+- **Deploying:** run `npm run migrate` (migration `20260925_065346_media_uploaded_by`) before the new
+  version serves traffic.
+
+Where the build differs from the text below:
+
+- On phones the identity panel stacks the 96px avatar above the name, instead of shrinking it to 72px.
+- T2.8's component is called `AccountSection`, since it also holds the danger zone.
+- Beyond the plan: replacing or removing a profile picture deletes the old upload, a deleted account's
+  uploads are deleted too, and the profile returns `googleAvatarUrl` so the picture preview is right
+  after "Şəkli sil".
+- The "Oyundan çıx" announcement lives in `JoinPanel`, because the refresh after leaving unmounts the
+  button that triggered it.
+
 ## Decisions taken
 
 | Question | Decision |
@@ -298,20 +319,20 @@ something usable.
 
 ### Phase 0: Repo hygiene
 
-- [ ] **T0.1 Sync `package-lock.json`.** `npm ci` fails: the lockfile is missing `yaml@2.9.1`. Run
+- [x] **T0.1 Sync `package-lock.json`.** `npm ci` fails: the lockfile is missing `yaml@2.9.1`. Run
       `npm install`, commit only the lockfile, and confirm a clean `npm ci` succeeds.
 
 ### Phase 1: Backend and shared plumbing
 
-- [ ] **T1.1 Host id on game cards.** `lib/game-backend.ts`: `normalizeGameRecord` / `toGameCard`
+- [x] **T1.1 Host id on game cards.** `lib/game-backend.ts`: `normalizeGameRecord` / `toGameCard`
       return `host.id` (string, or `null` when the host is missing). Update the game card JSON in
       `docs/api.md`. Test in `tests/game-backend.test.ts`.
-- [ ] **T1.2 `memberSinceLabel`.** Add a fixed `MONTHS_LONG` array (`yanvar … dekabr`; like
+- [x] **T1.2 `memberSinceLabel`.** Add a fixed `MONTHS_LONG` array (`yanvar … dekabr`; like
       `MONTHS_SHORT`, it doesn't depend on the ICU build) and `formatBakuMonthYear()` in
       `lib/game-backend.ts`. Return `memberSinceLabel` ("fevral 2026") from `getMyProfile` and
       `getPublicProfile`, and document it. Unit test includes the Baku month edge:
       `2026-01-31T21:00Z` → "fevral 2026".
-- [ ] **T1.3 Consistent stats.** `lib/profile-queries.ts`: today `counts.played` excludes hosted games
+- [x] **T1.3 Consistent stats.** `lib/profile-queries.ts`: today `counts.played` excludes hosted games
       while `stats.playedBySport` includes them, and "past" counts cancelled games as played.
       - Add a `playedWhere(now)` (past and `status != cancelled`) and use it for `played`,
         `hostedPast` and `playedBySport`.
@@ -319,9 +340,9 @@ something usable.
         with their status.
       - Add `stats.totalPlayed` (the sum of `playedBySport`) and update `docs/api.md`.
       - Database tests: a cancelled past game isn't counted, and `totalPlayed === played + hostedPast`.
-- [ ] **T1.4 `parseProfileTabs()`.** A pure helper in `lib/game-backend.ts`: `?games` / `?when` →
+- [x] **T1.4 `parseProfileTabs()`.** A pure helper in `lib/game-backend.ts`: `?games` / `?when` →
       `{ role, when }`, defaulting to `joined` / `upcoming` and ignoring anything else. Unit tests.
-- [ ] **T1.5 Reusable `GamesGrid`.**
+- [x] **T1.5 Reusable `GamesGrid`.**
       - Replace the hard-wired `/api/v1/games` + `sport`/`to` with `endpoint` (default
         `/api/v1/games`), `query: Record<string, string | null | undefined>` and `cardContext` props.
         String props only, because it is a client component.
@@ -329,87 +350,87 @@ something usable.
         for both list responses.
       - Update the `GamesSection` call.
       - Done when the home page and `/games` behave exactly as before.
-- [ ] **T1.6 `GameCard` contexts.**
+- [x] **T1.6 `GameCard` contexts.**
       - `context?: 'browse' | 'joined' | 'hosting' | 'past'`, with the card actions from the table in
         §2. `browse` is today's behaviour.
       - The host name becomes a link to `/users/{host.id}` when an id is present.
       - `GameCardSkeleton` is unchanged.
-- [ ] **T1.7 `apiFetch` and `FormData`.** `lib/api-client.ts` only sets
+- [x] **T1.7 `apiFetch` and `FormData`.** `lib/api-client.ts` only sets
       `Content-Type: application/json` when the body isn't `FormData`. Add a `patchJson` helper next
       to `postJson`.
-- [ ] **T1.8 Give spots back on account deletion** *(behaviour change; skip to keep today's)*.
+- [x] **T1.8 Give spots back on account deletion** *(behaviour change; skip to keep today's)*.
       - In `deleteMyAccount`, inside the same transaction: for each participation in an upcoming,
         still-scheduled game the user doesn't host, add the spot back, capped at `max_players` with
         the same guarded `UPDATE` as `releaseSpot` in `lib/join-game.ts`.
       - Update the comment and `docs/api.md`.
       - Database test: an upcoming joined game regains its spot; a past one doesn't change.
-- [ ] **T1.9 Shared `PhoneInput`.** Extract the `+994` prefix input (formatting, `aria-describedby`
+- [x] **T1.9 Shared `PhoneInput`.** Extract the `+994` prefix input (formatting, `aria-describedby`
       wiring, error slot) from `JoinPanel`/`GameForm` into `components/ui/PhoneInput.tsx` and use it
       in both. No visual change.
-- [ ] **T1.10 Shared danger styles.** Move `.dangerZone`, `.dangerTitle`, `.dangerText`, `.dangerButton`,
+- [x] **T1.10 Shared danger styles.** Move `.dangerZone`, `.dangerTitle`, `.dangerText`, `.dangerButton`,
       `.confirm` and `.confirmActions` from `GameForm.module.css` into `components/ui/danger.module.css`.
       GameForm uses the new file, with no visual change.
 
 ### Phase 2: `/profile` (read-only)
 
-- [ ] **T2.1 Protect the route.** Add `'/profile'` to the `proxy.ts` matcher.
-- [ ] **T2.2 Page and data.**
+- [x] **T2.1 Protect the route.** Add `'/profile'` to the `proxy.ts` matcher.
+- [x] **T2.2 Page and data.**
       - `app/(frontend)/profile/page.tsx` with `metadata.title = 'Profilim'`, the static shell and
         `ProfileContent`, as in §2 "Rendering".
       - `searchParams` is awaited inside the Suspense boundary.
       - Redirect to login when there's no user or no profile.
-- [ ] **T2.3 Styles.** `components/profile/Profile.module.css`:
+- [x] **T2.3 Styles.** `components/profile/Profile.module.css`:
       - Page rhythm, the overview grid (`701fr / 495fr`, `align-items: stretch`, one column
         < 860px), identity layout, stat tiles, sport rows, role tabs grid (2 columns) and the
         segmented control.
       - All values from §1, including the phone breakpoints.
-- [ ] **T2.4 `ProfileIdentity`** (server). The "Profili redaktə et" / "Əlavə et" slots stay empty
+- [x] **T2.4 `ProfileIdentity`** (server). The "Profili redaktə et" / "Əlavə et" slots stay empty
       until Phase 3.
-- [ ] **T2.5 `ProfileStats`** (server), including the "nothing played" text.
-- [ ] **T2.6 `ProfileTabs`** (client). Role tabs and time segments as links, with the `SportTabs`
+- [x] **T2.5 `ProfileStats`** (server), including the "nothing played" text.
+- [x] **T2.6 `ProfileTabs`** (client). Role tabs and time segments as links, with the `SportTabs`
       pattern (`useOptimistic`, `useTransition`, `data-pending`). Tabs have `aria-current`; the nav
       has `aria-label="Oyun filtri"`. The grid dims while pending (copy the
       `.section:has(nav[data-pending])` rule).
-- [ ] **T2.7 `ProfileGames`** (server). Heading, tabs, and either `GamesGrid` (endpoint
+- [x] **T2.7 `ProfileGames`** (server). Heading, tabs, and either `GamesGrid` (endpoint
       `/api/v1/me/games`, `cardContext` from the tab, key per tab) or the matching `EmptyState` from
       the table in §2.
-- [ ] **T2.8 `AccountPanel`** with `LogoutButton`.
-- [ ] **T2.9 `ProfileSkeleton`** in `components/games/skeletons.tsx`, built from the real classes:
+- [x] **T2.8 `AccountPanel`** with `LogoutButton`.
+- [x] **T2.9 `ProfileSkeleton`** in `components/games/skeletons.tsx`, built from the real classes:
       a 96px circle and lines in the identity panel, three stat tiles and three bars, two tab cards,
       the segmented bar, and `GamesGridSkeleton count={3}`. `aria-busy="true"`.
-- [ ] **T2.10 Header link** (§6) in `Header.tsx` / `Header.module.css`, for both the bar and the
+- [x] **T2.10 Header link** (§6) in `Header.tsx` / `Header.module.css`, for both the bar and the
       mobile menu.
-- [ ] **T2.11 Docs.** Add `/profile` and `/users/[id]` to the structure table in `README.md` (the
+- [x] **T2.11 Docs.** Add `/profile` and `/users/[id]` to the structure table in `README.md` (the
       latter once Phase 4 ships).
 
 ### Phase 3: Editing and deleting
 
-- [ ] **T3.1 `EditProfileButton` + `EditProfileModal`** (client, `components/profile/`), everything
+- [x] **T3.1 `EditProfileButton` + `EditProfileModal`** (client, `components/profile/`), everything
       in §3 except the picture row. Wire up the "Əlavə et" shortcut, which opens with the phone
       field focused (`data-autofocus` on phone, `focusKey`).
-- [ ] **T3.2 Header freshness check.** In a browser, edit the name and confirm the header chip
+- [x] **T3.2 Header freshness check.** In a browser, edit the name and confirm the header chip
       updates after `router.refresh()`. If it doesn't, use a full reload after saving and comment why.
-- [ ] **T3.3 `DeleteAccount`** (client). The danger zone and confirm modal from §4, using
+- [x] **T3.3 `DeleteAccount`** (client). The danger zone and confirm modal from §4, using
       `danger.module.css` from T1.10.
-- [ ] **T3.4 Tests.** If the PATCH-body builder (changed keys only, empty phone → `null`) is a pure
+- [x] **T3.4 Tests.** If the PATCH-body builder (changed keys only, empty phone → `null`) is a pure
       function, unit-test it in `tests/`.
 
 ### Phase 4: Public profiles
 
-- [ ] **T4.1 Page.** `app/(frontend)/users/[id]/page.tsx` with a `cache()` loader, `generateMetadata`
+- [x] **T4.1 Page.** `app/(frontend)/users/[id]/page.tsx` with a `cache()` loader, `generateMetadata`
       (name, `noindex`), the static shell, `PublicProfileSkeleton` and `notFound()` handling (§5).
-- [ ] **T4.2 Content.** Identity (name as `h1`), hosted-games stats ("Təşkilatçı": upcoming /
+- [x] **T4.2 Content.** Identity (name as `h1`), hosted-games stats ("Təşkilatçı": upcoming /
       `hostedPast`), a games grid in the browse context, and the empty state.
-- [ ] **T4.3 "Your own profile" notice** in its own Suspense boundary, linking to `/profile`.
-- [ ] **T4.4 Host links.** The name in the game page's host panel links to `/users/{host.id}`. Cards
+- [x] **T4.3 "Your own profile" notice** in its own Suspense boundary, linking to `/profile`.
+- [x] **T4.4 Host links.** The name in the game page's host panel links to `/users/{host.id}`. Cards
       already link after T1.6.
-- [ ] **T4.5 Optional caching.** `getPublicProfile` doesn't depend on the viewer. It can use
+- [ ] **T4.5 Optional caching** *(skipped)*. `getPublicProfile` doesn't depend on the viewer. It can use
       `use cache` + `cacheTag(GAMES_CACHE_TAG)` + the existing cache profile, like `findGames`.
       `updateMyProfile` and every game write already invalidate that tag.
 
 ### Phase 5: Profile pictures (security first)
 
-- [ ] **T5.1 Lock down `media`.** This is exploitable today: `collections/Media.ts` sets only `read`,
+- [x] **T5.1 Lock down `media`.** This is exploitable today: `collections/Media.ts` sets only `read`,
       so Payload's default `Boolean(user)` lets any signed-in user update or delete any upload,
       including venue photos, game covers and other people's avatars.
       - Add `uploadedBy` (relationship to `users`, read-only in admin), set in a `beforeChange` hook on create.
@@ -422,16 +443,16 @@ something usable.
         built-in limit option before hand-rolling one.
       - `npm run migrate:create` (needs `DATABASE_URL`; the adapter runs with `push: false`), then
         regenerate `payload-types.ts`.
-- [ ] **T5.2 Ownership check on save.**
+- [x] **T5.2 Ownership check on save.**
       - `updateMyProfile` accepts a `profilePictureId` only if the user uploaded it (or it's already
         their picture). Otherwise it returns `MEDIA_NOT_FOUND`, which doesn't reveal that the upload
         exists. Today any media id works, including a venue photo.
       - `getMyProfile` returns `hasUploadedPicture`. Update the docs.
-- [ ] **T5.3 Database tests.**
+- [x] **T5.3 Database tests.**
       - Another user can't update or delete my upload (`overrideAccess: false` with their `user`).
       - `updateMyProfile` rejects someone else's upload.
       - An SVG upload is refused.
-- [ ] **T5.4 Picture row in the edit modal.**
+- [x] **T5.4 Picture row in the edit modal.**
       - Hidden `<input type="file" accept="image/jpeg,image/png,image/webp">` behind "Şəkli dəyiş".
       - Client checks with messages "Yalnız JPG, PNG və ya WebP şəkil yükləyin." and "Şəkil 4 MB-dan
         böyük ola bilməz.".
@@ -441,12 +462,12 @@ something usable.
       - "Yadda saxla" sends `profilePictureId`. "Şəkli sil" (only when `hasUploadedPicture`) sends
         `null`, which falls back to the Google photo, then initials.
       - Closing the modal without saving deletes the orphaned upload, best effort.
-- [ ] **T5.5 Image hosts.** Confirm uploaded avatars render through `next/image` locally
+- [x] **T5.5 Image hosts.** Confirm uploaded avatars render through `next/image` locally
       (`/api/media/file/…`) and on Vercel Blob (already in `remotePatterns`).
 
 ### Phase 6: Leave a game
 
-- [ ] **T6.1 "Oyundan çıx".**
+- [x] **T6.1 "Oyundan çıx".**
       - In `JoinPanel`, when `viewer.joined && !viewer.isHost` and the game hasn't started (status
         `open`/`full`): an `outlinePrimary` `lg` block button under "Siz bu oyuna qoşulmusunuz".
       - It opens a confirm modal: "Oyundan çıxmaq istəyirsiniz?" / "Yeriniz başqa oyunçuya açılacaq.
@@ -456,25 +477,27 @@ something usable.
 
 ### Phase 7: Verification and polish
 
-- [ ] **T7.1 Checks on every PR:** `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`.
+- [x] **T7.1 Checks on every PR:** `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`.
       Baseline today: clean typecheck, 0 lint errors, 72 tests pass; the 24 database tests skip
       without `DATABASE_URL`.
-- [ ] **T7.2 Browser pass** against a seeded database, signed in through `/admin`:
-      - [ ] Header chip links to `/profile`, both in the bar and in the mobile menu
-      - [ ] Signed out, `/profile?games=hosting` → login → back to the same tab
-      - [ ] Tabs switch instantly (optimistic), the URL updates, back/forward and reload keep the tab
-      - [ ] "Daha çox" pages through `/api/v1/me/games`; "Az göstər" collapses
-      - [ ] All four empty states and their CTAs
-      - [ ] Joined cards never say "Qoşul"; hosting cards say "Redaktə et"; past cards show "Keçmiş oyun"
-      - [ ] Edit: rename → header and cards update; a taken phone → error on the phone field; clearing the phone works
-      - [ ] Delete a seed account → signed out on `/`, its hosted games gone, spots returned (T1.8)
-      - [ ] `/users/{id}`: no email/phone anywhere in the HTML, `noindex` present, unknown id → 404
-      - [ ] 360px wide: no horizontal scroll, panels stack, danger button full width
-      - [ ] Keyboard only: tab order, focus rings, modals trap focus and return it, Escape closes
-      - [ ] Screen reader: headings in order (h1 → h2 → h3), tab `aria-current`, live regions announce
-      - [ ] `prefers-reduced-motion`: no stagger or fill animations
+- [x] **T7.2 Browser pass** against a seeded database, signed in through `/admin`:
+      - [x] Header chip links to `/profile`, both in the bar and in the mobile menu
+      - [x] Signed out, `/profile?games=hosting` → login → back to the same tab
+      - [x] Tabs switch instantly (optimistic), the URL updates, reload keeps the tab (like the sport
+            tabs they replace the history entry, so "back" leaves the page rather than stepping through tabs)
+      - [x] "Daha çox" pages through `/api/v1/me/games`; "Az göstər" collapses
+      - [x] All four empty states and their CTAs
+      - [x] Joined cards never say "Qoşul"; hosting cards say "Redaktə et"; past cards show "Keçmiş oyun"
+      - [x] Edit: rename → header and cards update; a taken phone → error on the phone field; clearing the phone works
+      - [x] Delete a seed account → signed out on `/`, its hosted games gone, spots returned (T1.8)
+      - [x] `/users/{id}`: no email/phone anywhere in the HTML, `noindex` present, unknown id → 404
+      - [x] 360px wide: no horizontal scroll, panels stack, danger button full width
+      - [x] Keyboard only: tab order, focus rings, modals trap focus and return it, Escape closes
+      - [x] Screen reader: headings in order (h1 → h2 → h3), tab `aria-current`, live regions announce
+            (checked in the DOM and accessibility tree with Playwright, not with a screen reader)
+      - [x] `prefers-reduced-motion`: no stagger or fill animations
 - [ ] **T7.3 Copy review** of every new Azerbaijani string by a native speaker (see §2–§5).
-- [ ] **T7.4 Docs.** `docs/api.md` for everything changed in Phases 1 and 5; `README.md` structure table.
+- [x] **T7.4 Docs.** `docs/api.md` for everything changed in Phases 1 and 5; `README.md` structure table.
 
 ## 8. Risks and notes
 

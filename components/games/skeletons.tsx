@@ -293,9 +293,10 @@ function StatTilesSkeleton({ count }: { count: number }) {
   return (
     <div className={profile.tiles} style={{ '--tiles': count } as CSSProperties}>
       {Array.from({ length: count }, (_, index) => (
-        <div key={index} className={sk.stack} style={{ gap: 8 }}>
-          <Bone style={{ width: 44, height: 34 }} />
-          <Bone className={sk.line} style={{ width: '75%', height: 12 }} />
+        // The real tile's number (30px × 1.25) and label line, so the panel keeps its height.
+        <div key={index} className={sk.stack} style={{ gap: 4 }}>
+          <Bone style={{ width: 44, height: 38 }} />
+          <Bone className={sk.line} style={{ width: '75%', height: 14 }} />
         </div>
       ))}
     </div>
@@ -309,12 +310,12 @@ export function ProfileSkeleton() {
       <div className={profile.overview} aria-busy="true">
         <ProfileIdentitySkeleton facts={3} action />
         <div className={detail.panel}>
-          <Bone className={sk.line} style={{ width: 96 }} />
+          <Bone className={sk.line} style={{ width: 96, height: 17 }} />
           <StatTilesSkeleton count={3} />
           <hr className={profile.divider} />
           <div className={profile.sports}>
             {[0, 1, 2].map((index) => (
-              <div key={index} className={profile.sport}>
+              <div key={index} className={profile.sport} style={{ minHeight: 20 }}>
                 <Bone className={sk.line} style={{ width: 90 }} />
                 <Bone className={sk.bar} style={{ height: 8 }} />
                 <Bone className={sk.line} style={{ width: 16, justifySelf: 'end' }} />
@@ -355,7 +356,7 @@ export function PublicProfileSkeleton() {
       <div className={profile.overview} aria-busy="true">
         <ProfileIdentitySkeleton facts={1} action={false} />
         <div className={detail.panel}>
-          <Bone className={sk.line} style={{ width: 96 }} />
+          <Bone className={sk.line} style={{ width: 96, height: 17 }} />
           <StatTilesSkeleton count={2} />
         </div>
       </div>
