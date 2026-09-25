@@ -80,6 +80,15 @@ export function GamesGrid({
     }
   }
 
+  /** A game left from its card ("Oyundan çıx") drops out of the list at once; the page refresh that
+   * follows updates the counts around it. */
+  function removeGame(gameId: string) {
+    const index = games.findIndex((game) => game.id === gameId)
+    if (index === -1) return
+    setGames(games.filter((game) => game.id !== gameId))
+    if (index < visible) setVisible(visible - 1)
+  }
+
   function showLess() {
     setVisible(baseCount)
     setError(null)
@@ -96,7 +105,13 @@ export function GamesGrid({
         {shown.map((game, index) => (
           // Each batch ("Daha çox" adds one) staggers in from its own first card.
           <li key={game.id} className="reveal" style={{ '--i': index % step } as CSSProperties}>
-            <GameCard game={game} priority={index < 3} headingLevel={cardHeadingLevel} context={cardContext} />
+            <GameCard
+              game={game}
+              priority={index < 3}
+              headingLevel={cardHeadingLevel}
+              context={cardContext}
+              onLeft={cardContext === 'joined' ? removeGame : undefined}
+            />
           </li>
         ))}
       </ul>

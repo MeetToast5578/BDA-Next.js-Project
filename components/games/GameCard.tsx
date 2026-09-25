@@ -6,6 +6,7 @@ import { buttonClass } from '@/components/ui/button'
 import { Icon } from '@/components/ui/Icon'
 import { Avatar, LevelBadge, ProgressBar, SportBadge } from './bits'
 import { CoverImage } from './CoverImage'
+import { LeaveGame } from './LeaveGame'
 import styles from './GameCard.module.css'
 import { STATUS_LABELS } from './sports'
 
@@ -21,12 +22,15 @@ export function GameCard({
   priority = false,
   headingLevel = 'h3',
   context = 'browse',
+  onLeft,
 }: {
   game: GameCardData
   priority?: boolean
   /** One level below the heading of the list the card is in. */
   headingLevel?: 'h2' | 'h3'
   context?: GameCardContext
+  /** In the `joined` list: the viewer left this game from its card ("Oyundan çıx"). */
+  onLeft?: (gameId: string) => void
 }) {
   const Heading = headingLevel
   const href = `/games/${game.id}`
@@ -113,7 +117,7 @@ export function GameCard({
             )}
           </div>
           <div className={styles.action}>
-            <CardAction game={game} href={href} context={context} />
+            <CardAction game={game} href={href} context={context} onLeft={onLeft} />
           </div>
         </div>
       </div>
@@ -121,7 +125,17 @@ export function GameCard({
   )
 }
 
-function CardAction({ game, href, context }: { game: GameCardData; href: string; context: GameCardContext }) {
+function CardAction({
+  game,
+  href,
+  context,
+  onLeft,
+}: {
+  game: GameCardData
+  href: string
+  context: GameCardContext
+  onLeft?: (gameId: string) => void
+}) {
   if (context === 'past') {
     const label = game.status === 'cancelled' ? 'Ləğv edilib' : game.status === 'live' ? 'Davam edir' : 'Keçmiş oyun'
     return <span className={buttonClass('muted', 'sm')}>{label}</span>
@@ -138,6 +152,11 @@ function CardAction({ game, href, context }: { game: GameCardData; href: string;
         Redaktə et
       </Link>
     )
+  }
+
+  // A game the viewer is in can be left from its card until kick-off; the card itself opens the game.
+  if (context === 'joined' && onLeft && isUpcoming(game.status)) {
+    return <LeaveGame gameId={game.id} gameTitle={game.title} onLeft={() => onLeft(game.id)} size="card" />
   }
 
   if (context === 'joined' || context === 'hosting') {

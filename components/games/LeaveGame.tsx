@@ -18,7 +18,19 @@ const REFRESH_ON = new Set(['NOT_JOINED', 'GAME_STARTED', 'GAME_NOT_FOUND'])
  * `POST /api/v1/games/{id}/leave` hands the spot back and the page refreshes into its join state.
  * That refresh unmounts this component, so `onLeft` is where the caller announces it.
  */
-export function LeaveGame({ gameId, onLeft }: { gameId: string; onLeft: () => void }) {
+export function LeaveGame({
+  gameId,
+  gameTitle,
+  onLeft,
+  size = 'block',
+}: {
+  gameId: string
+  /** Named in the button's label where the game isn't obvious from the page (a card in a list). */
+  gameTitle?: string
+  onLeft: () => void
+  /** `block` under the game page's "Siz bu oyuna qoşulmusunuz"; `card` in a game card's action slot. */
+  size?: 'block' | 'card'
+}) {
   const router = useRouter()
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
@@ -51,12 +63,13 @@ export function LeaveGame({ gameId, onLeft }: { gameId: string; onLeft: () => vo
     <>
       <button
         type="button"
-        className={buttonClass('outlinePrimary', 'lg', { block: true })}
+        className={size === 'card' ? buttonClass('outlinePrimary', 'sm') : buttonClass('outlinePrimary', 'lg', { block: true })}
         onClick={() => {
           setError(null)
           setOpen(true)
         }}
         aria-haspopup="dialog"
+        aria-label={gameTitle ? `${gameTitle} oyunundan çıx` : undefined}
       >
         Oyundan çıx
       </button>
