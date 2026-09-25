@@ -1,7 +1,7 @@
 // Response shapes of the /api/v1 endpoints, derived from the functions that build them so the
 // frontend can't drift from the backend. Type-only imports: nothing server-side reaches the client bundle.
 import type { AvailabilityStatus, countOpenGamesBySport, normalizeVenue, toGameCard } from '@/lib/game-backend'
-import type { findGames, getFeaturedGames, getGameDetail } from '@/lib/game-queries'
+import type { findGames, getFeaturedGames, getGameDetail, getGamePlayers } from '@/lib/game-queries'
 import type { findMyGames, getMyProfile, getPublicProfile } from '@/lib/profile-queries'
 
 export type { AvailabilityStatus }
@@ -16,6 +16,9 @@ export type SportSummary = ReturnType<typeof countOpenGamesBySport>[number]
 export type SportTab = { sport: string; label: string; iconKey: string; count: number }
 export type Venue = ReturnType<typeof normalizeVenue>
 export type Participant = FeaturedGame['participants']['preview'][number]
+/** `GET /api/v1/games/{id}/participants`: the "İştirakçılar" list. */
+export type GamePlayers = NonNullable<Awaited<ReturnType<typeof getGamePlayers>>>
+export type GamePlayer = GamePlayers['players'][number]
 
 export type CreateGameRequest = {
   sport: string

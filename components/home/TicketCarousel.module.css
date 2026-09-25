@@ -220,6 +220,13 @@
   min-height: 36px;
 }
 
+/* The avatar row opens the players list, so it too sits above the ticket's stretched link. */
+.players {
+  z-index: 2;
+  --trigger-hover: rgba(255, 255, 255, 0.14);
+  --trigger-ring: var(--focus-ring-on-dark);
+}
+
 .join {
   position: relative;
   z-index: 2;

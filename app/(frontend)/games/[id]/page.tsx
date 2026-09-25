@@ -3,11 +3,12 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { cache, Suspense } from 'react'
 
-import { AvatarStack, Avatar, LevelBadge, ProgressBar, SportBadge } from '@/components/games/bits'
+import { Avatar, LevelBadge, ProgressBar, SportBadge } from '@/components/games/bits'
 import { BackLink } from '@/components/games/BackLink'
 import { CoverImage } from '@/components/games/CoverImage'
 import styles from '@/components/games/GameDetail.module.css'
 import { JoinPanel } from '@/components/games/JoinPanel'
+import { PlayersButton } from '@/components/games/PlayersButton'
 import { GameDetailSkeleton } from '@/components/games/skeletons'
 import { buttonClass } from '@/components/ui/button'
 import { Icon } from '@/components/ui/Icon'
@@ -135,12 +136,13 @@ async function GameDetailContent({ params, searchParams }: Props) {
           <ProgressBar value={game.currentCount} max={game.maxCount} label="Doluluq" className={styles.progress} />
           <div className={styles.avatars}>
             {participants.total > 0 ? (
-              <AvatarStack
+              <PlayersButton
+                gameId={game.id}
+                gameTitle={game.title}
                 people={participants.preview}
                 total={participants.total}
                 size={34}
                 overlap={9}
-                label="Qoşulan oyunçular"
               />
             ) : (
               <p className={styles.muted}>Hələ heç kim qoşulmayıb. İlk sən ol!</p>

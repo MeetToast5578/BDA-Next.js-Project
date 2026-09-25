@@ -291,7 +291,7 @@ export interface GameParticipant {
   game: number | Game;
   user: number | User;
   /**
-   * Name the player gave in step 1 of the join form; shown in the participant list.
+   * Name the player gave in step 1 of the join form. The site shows the account's name, and this one only once the account is gone.
    */
   name?: string | null;
   /**

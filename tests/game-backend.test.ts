@@ -23,6 +23,7 @@ import {
   rankFeatured,
   startOfBakuDay,
   toGameCard,
+  toPlayer,
 } from '@/lib/game-backend'
 import {
   formatDateInput,
@@ -402,6 +403,38 @@ describe('initialsOf', () => {
     expect(initialsOf('Elvin Məmmədov')).toBe('EM')
     expect(initialsOf('Aysel Nuri Qasımova')).toBe('AN')
     expect(initialsOf('  ')).toBe('?')
+  })
+})
+
+describe('toPlayer', () => {
+  it("names a player after their account, so the list matches the profile it opens", () => {
+    const player = toPlayer({
+      name: 'Rəşad (qapıçı)',
+      user: { id: 7, fullName: 'Rəşad Babayev', profilePicture: { url: '/api/media/file/resad.png' } },
+    })
+    expect(player).toEqual({ id: '7', name: 'Rəşad Babayev', initials: 'RB', avatarUrl: '/api/media/file/resad.png' })
+  })
+
+  it('falls back to the name typed into the join form, then to a placeholder', () => {
+    expect(toPlayer({ name: '  Günel Hüseynova ', user: { id: 3, fullName: '  ' } })).toMatchObject({
+      id: '3',
+      name: 'Günel Hüseynova',
+      initials: 'GH',
+    })
+    expect(toPlayer({ user: { id: 4 } })).toMatchObject({ name: 'OyunaGəl istifadəçisi', initials: 'Oİ' })
+  })
+
+  it('keeps the account id when the relationship is not populated', () => {
+    expect(toPlayer({ name: 'Ramil', user: 12 })).toMatchObject({ id: '12', name: 'Ramil', avatarUrl: null })
+  })
+
+  it('has no profile to link to once the account is gone', () => {
+    expect(toPlayer({ name: 'Səbinə Əliyeva', user: null })).toEqual({
+      id: null,
+      name: 'Səbinə Əliyeva',
+      initials: 'SƏ',
+      avatarUrl: null,
+    })
   })
 })
 

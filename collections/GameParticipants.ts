@@ -36,7 +36,8 @@ export const GameParticipants: CollectionConfig = {
       name: 'name',
       type: 'text',
       admin: {
-        description: 'Name the player gave in step 1 of the join form; shown in the participant list.',
+        description:
+          "Name the player gave in step 1 of the join form. The site shows the account's name, and this one only once the account is gone.",
       },
     },
     {

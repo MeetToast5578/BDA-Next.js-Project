@@ -1,0 +1,153 @@
+/* The avatar row, as one button. Padding gives a bigger target and room for the focus ring; the
+ * negative margin keeps the avatars exactly where they were. */
+.trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px;
+  margin: -4px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s var(--ease-out);
+}
+
+.trigger:hover {
+  --spread: 4px;
+  background: var(--trigger-hover, color-mix(in srgb, var(--color-primary) 7%, transparent));
+}
+
+.trigger:active {
+  transform: scale(0.97);
+}
+
+.trigger:focus-visible {
+  outline: 3px solid var(--trigger-ring, var(--focus-ring));
+  outline-offset: 2px;
+}
+
+/* The list */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: min(440px, calc(100dvh - 240px));
+  margin: 0 -12px;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  color: var(--color-heading);
+  text-decoration: none;
+}
+
+.link {
+  transition: background-color 0.15s ease;
+}
+
+.link:hover {
+  background: var(--color-primary-tint);
+}
+
+.link:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: -3px;
+}
+
+.name {
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 22px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tag {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+}
+
+.hostTag {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.youTag {
+  background: var(--color-primary-tint);
+  color: var(--color-primary);
+}
+
+.link:hover .youTag {
+  background: var(--color-surface);
+}
+
+.chevron {
+  flex-shrink: 0;
+  width: 7px;
+  height: 12px;
+  margin-left: auto;
+  color: var(--color-subtle);
+  transition:
+    color 0.15s ease,
+    transform 0.2s var(--ease-out);
+}
+
+.link:hover .chevron {
+  color: var(--color-primary);
+  transform: translateX(2px);
+}
+
+.others {
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-muted);
+}
+
+.failed {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.skeletonAvatar {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.skeletonName {
+  width: 55%;
+  height: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger,
+  .chevron {
+    transition: none;
+  }
+}

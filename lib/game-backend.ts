@@ -49,7 +49,8 @@ export const FEATURED_WINDOW_HOURS = 7 * 24
 export const GAMES_DEFAULT_LIMIT = 12
 export const GAMES_MAX_LIMIT = 50
 
-const DEFAULT_HOST_NAME = 'OyunaGəl istifadəçisi'
+/** Shown for an account with no name, the host's or a player's. */
+const DEFAULT_USER_NAME = 'OyunaGəl istifadəçisi'
 const HOUR_MS = 60 * 60 * 1000
 const DAY_MS = 24 * HOUR_MS
 const BAKU_OFFSET_MS = 4 * HOUR_MS
@@ -366,6 +367,26 @@ export function userAvatarUrl(user: unknown) {
   return mediaUrl(asDoc(doc?.profilePicture)?.url) ?? nonEmptyString(doc?.avatarUrl)
 }
 
+/**
+ * One player of a game, from their `game-participants` row: an avatar in the stack, a row in the
+ * "İştirakçılar" list. The account's name wins over the one typed into the join form, so the list
+ * says what the profile it opens says. The typed name only stands in once the account is gone, and
+ * then there is no profile to link to (`id` is null).
+ */
+export function toPlayer(participant: unknown) {
+  const row = asDoc(participant)
+  const user = asDoc(row?.user)
+  // Populated or not, the relationship still names the account.
+  const userId = user ? user.id : row?.user
+  const name = (nonEmptyString(user?.fullName) ?? nonEmptyString(row?.name))?.trim() ?? DEFAULT_USER_NAME
+  return {
+    id: typeof userId === 'number' || typeof userId === 'string' ? String(userId) : null,
+    name,
+    initials: initialsOf(name),
+    avatarUrl: userAvatarUrl(user),
+  }
+}
+
 /** Full and thumbnail URLs of an uploaded media document, or null when there is no usable file. */
 function mediaSizes(value: unknown) {
   const media = asDoc(value)
@@ -404,7 +425,7 @@ export function normalizeGameRecord(raw: unknown, now = Date.now()) {
   const sportMeta = SPORT_META[sport] ?? SPORT_META.football
   const level = String(game.level ?? 'medium')
   const host = asDoc(game.host)
-  const hostName = nonEmptyString(host?.fullName) ?? DEFAULT_HOST_NAME
+  const hostName = nonEmptyString(host?.fullName) ?? DEFAULT_USER_NAME
   // Populated or not, the relationship still names the host, which is what a profile link needs.
   const hostId = host ? host.id : game.host
   const startsAt = game.scheduledAt ? String(game.scheduledAt) : null

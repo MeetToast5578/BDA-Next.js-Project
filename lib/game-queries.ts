@@ -10,14 +10,13 @@ import {
   countOpenGamesBySport,
   deriveAvailability,
   foldForSearch,
-  initialsOf,
   isUpcoming,
   normalizeGameRecord,
   normalizePhone,
   normalizeVenue,
   rankFeatured,
   toGameCard,
-  userAvatarUrl,
+  toPlayer,
   type CreateGameInput,
   type GameListQuery,
 } from '@/lib/game-backend'
@@ -49,7 +48,7 @@ const CARD_SELECT = {
 
 const CARD_POPULATE = { users: { fullName: true, profilePicture: true, avatarUrl: true } } as const
 
-type ParticipantPreview = { name: string; initials: string; avatarUrl: string | null }
+type ParticipantPreview = ReturnType<typeof toPlayer>
 
 export async function getPayloadClient() {
   const { getPayload } = await import('payload')
@@ -96,10 +95,7 @@ async function findParticipantPreviews(payload: Payload, gameIds: Array<number |
     const gameId = String(typeof participant.game === 'object' ? participant.game?.id : participant.game)
     const preview = previews.get(gameId) ?? []
     if (preview.length >= PARTICIPANT_PREVIEW_SIZE) continue
-    const user = typeof participant.user === 'object' ? participant.user : null
-    // The name given in step 1 of the join form wins over the profile's.
-    const name = participant.name?.trim() || user?.fullName || 'OyunaGəl istifadəçisi'
-    preview.push({ name, initials: initialsOf(name), avatarUrl: userAvatarUrl(user) })
+    preview.push(toPlayer(participant))
     previews.set(gameId, preview)
   }
   return previews
@@ -386,6 +382,58 @@ export async function getGameDetail(
     host: { ...game.host, phone: joined || isHost ? doc.contactPhone ?? null : null },
     participants: { preview: previews.get(String(gameId)) ?? [], total: game.currentCount },
     viewer: { joined, isHost },
+  }
+}
+
+/**
+ * Everyone in a game, for the "İştirakçılar" list the avatar row opens: the host first, then the
+ * players in the order they joined, each with the account id their row links to. `you` marks the
+ * viewer's own row.
+ *
+ * `others` is the rest of `currentCount`: players the host said were already coming when they
+ * created the game (a count that includes the host), who have no account to list.
+ *
+ * Not cached: it is only read when someone opens the list, and must already show a join from a
+ * second ago.
+ */
+export async function getGamePlayers(gameId: number, viewerId: number | null) {
+  const payload = await getPayloadClient()
+  const [doc, { docs }] = await Promise.all([
+    payload.findByID({
+      collection: 'games',
+      id: gameId,
+      select: CARD_SELECT,
+      populate: CARD_POPULATE,
+      depth: 2,
+      overrideAccess: true,
+      disableErrors: true,
+    }),
+    payload.find({
+      collection: 'game-participants',
+      where: { game: { equals: gameId } },
+      select: { user: true, name: true },
+      populate: CARD_POPULATE,
+      sort: 'createdAt',
+      depth: 2,
+      pagination: false,
+      overrideAccess: true,
+    }),
+  ])
+  if (!doc) return null
+
+  const game = normalizeGameRecord(doc)
+  const isViewer = (id: string | null) => id !== null && viewerId !== null && id === String(viewerId)
+  const players = docs
+    .map(toPlayer)
+    // The host's spot is the game itself; a stray participant row for them would list them twice.
+    .filter((player) => player.id === null || player.id !== game.host.id)
+    .map((player) => ({ ...player, you: isViewer(player.id) }))
+
+  return {
+    game: { id: game.id, title: game.title, currentCount: game.currentCount, maxCount: game.maxCount },
+    host: { ...game.host, you: isViewer(game.host.id) },
+    players,
+    others: Math.max(0, game.currentCount - players.length - 1),
   }
 }
 
