@@ -124,6 +124,27 @@
   text-underline-offset: 3px;
 }
 
+/* The picture row at the top of "Profili redaktə et". */
+.pictureRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.pictureText {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pictureActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
 .identityActions {
   display: flex;
   flex-wrap: wrap;

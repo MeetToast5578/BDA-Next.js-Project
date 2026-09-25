@@ -210,6 +210,10 @@ export async function getMyProfile(userId: number, now = new Date()) {
     avatarUrl: userAvatarUrl(user),
     memberSince: user.createdAt,
     memberSinceLabel: formatBakuMonthYear(user.createdAt),
+    /** An uploaded picture is set, so "Şəkli sil" has something to remove (the Google one can't be). */
+    hasUploadedPicture: relationId(user.profilePicture) !== null,
+    /** What `avatarUrl` falls back to once the uploaded picture is removed. */
+    googleAvatarUrl: user.avatarUrl?.trim() || null,
     counts: {
       hostingUpcoming: counts.hostingUpcoming,
       hostedPast: counts.hostedPast,
@@ -228,19 +232,54 @@ export type MyProfile = NonNullable<Awaited<ReturnType<typeof getMyProfile>>>
 
 type UpdateResult = { ok: true; profile: MyProfile } | { ok: false; code: string; message: string }
 
-/** Applies a validated profile edit. Phone numbers are unique, so a clash is reported as such. */
+/** The id behind a relationship value, populated or not. */
+function relationId(value: unknown) {
+  const id = value && typeof value === 'object' ? (value as { id?: unknown }).id : value
+  return typeof id === 'number' ? id : null
+}
+
+/** Deletes uploads, file and all. Best effort: a leftover file must never fail what came before it. */
+async function deleteUploads(payload: Payload, where: Where) {
+  try {
+    await payload.delete({ collection: 'media', where, overrideAccess: true })
+  } catch (error) {
+    console.error('Failed to delete uploads', error)
+  }
+}
+
+/**
+ * Applies a validated profile edit. Phone numbers are unique, so a clash is reported as such.
+ *
+ * A picture must be one this user uploaded: any other id — a venue photo, someone else's avatar —
+ * is answered as if it did not exist, which also keeps quiet about what does. The picture it
+ * replaces, if this user uploaded it, is deleted: nothing else can point at it, and it is theirs.
+ */
 export async function updateMyProfile(userId: number, update: ProfileUpdate): Promise<UpdateResult> {
   const payload = await getPayloadClient()
 
-  if (update.profilePictureId != null) {
+  const current = await payload.findByID({
+    collection: 'users',
+    id: userId,
+    select: { profilePicture: true },
+    depth: 0,
+    overrideAccess: true,
+    disableErrors: true,
+  })
+  if (!current) return { ok: false, code: 'USER_NOT_FOUND', message: 'İstifadəçi tapılmadı.' }
+  const currentPictureId = relationId(current.profilePicture)
+
+  if (update.profilePictureId != null && update.profilePictureId !== currentPictureId) {
     const media = await payload.findByID({
       collection: 'media',
       id: update.profilePictureId,
+      select: { uploadedBy: true },
       depth: 0,
       overrideAccess: true,
       disableErrors: true,
     })
-    if (!media) return { ok: false, code: 'MEDIA_NOT_FOUND', message: 'Şəkil tapılmadı.' }
+    if (!media || relationId(media.uploadedBy) !== userId) {
+      return { ok: false, code: 'MEDIA_NOT_FOUND', message: 'Şəkil tapılmadı.' }
+    }
   }
 
   if (update.phone) {
@@ -270,6 +309,11 @@ export async function updateMyProfile(userId: number, update: ProfileUpdate): Pr
   // The host's name and picture are shown on every card they host.
   invalidateGamesCache()
 
+  const replacedPicture = update.profilePictureId !== undefined && update.profilePictureId !== currentPictureId
+  if (replacedPicture && currentPictureId !== null) {
+    await deleteUploads(payload, { and: [{ id: { equals: currentPictureId } }, { uploadedBy: { equals: userId } }] })
+  }
+
   const profile = await getMyProfile(userId)
   if (!profile) return { ok: false, code: 'USER_NOT_FOUND', message: 'İstifadəçi tapılmadı.' }
   return { ok: true, profile }
@@ -282,7 +326,7 @@ export async function updateMyProfile(userId: number, update: ProfileUpdate): Pr
  * alone would leave hosted games with no host — a required field — which nobody could then edit or
  * delete, still listed and still carrying a contact number. Their games go with them, and so do the
  * participant rows of those games and this user's own participations, whose spots in upcoming games
- * are handed back. One transaction, all or nothing.
+ * are handed back. One transaction, all or nothing. Their uploaded pictures are deleted afterwards.
  */
 export async function deleteMyAccount(userId: number) {
   const payload = await getPayloadClient()
@@ -296,6 +340,15 @@ export async function deleteMyAccount(userId: number) {
     overrideAccess: true,
   })
   const hostedIds = hosted.docs.map((doc) => doc.id)
+  const uploads = await payload.find({
+    collection: 'media',
+    where: { uploadedBy: { equals: userId } },
+    select: { alt: true },
+    depth: 0,
+    pagination: false,
+    overrideAccess: true,
+  })
+  const uploadIds = uploads.docs.map((doc) => doc.id)
 
   const transactionID = (await payload.db.beginTransaction()) ?? undefined
   const req = { transactionID }
@@ -338,6 +391,10 @@ export async function deleteMyAccount(userId: number) {
     throw error
   }
   invalidateGamesCache()
+  // Their pictures go too. After the commit, because deleting an upload also deletes its files, which
+  // no transaction can bring back; `uploadedBy` is ON DELETE SET NULL, so they are found by the ids
+  // collected before.
+  if (uploadIds.length > 0) await deleteUploads(payload, { id: { in: uploadIds } })
 
   return { deletedGames: hostedIds.length }
 }

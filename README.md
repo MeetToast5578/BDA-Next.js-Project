@@ -56,3 +56,4 @@ A [Next.js](https://nextjs.org) app with [Payload CMS](https://payloadcms.com) a
 | `npm run lint`          | Run ESLint                                    |
 | `npm test`              | Run the Vitest suite (join tests use `DATABASE_URL`) |
 | `npm run seed`          | Reset and fill the database with sample data  |
+| `npm run migrate`       | Apply pending database migrations (run it before starting a new version) |

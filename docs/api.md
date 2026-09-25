@@ -325,7 +325,8 @@ also hands the client `role`, `googleId`, `loginAttempts` and `lockUntil`.
 {
   "id": "12", "fullName": "Kərim Məmmədov", "firstName": "Kərim", "initials": "KM",
   "email": "k@example.com", "phoneNumber": "+994502103456",
-  "avatarUrl": "…", "memberSince": "2026-02-11T09:12:00.000Z", "memberSinceLabel": "fevral 2026",
+  "avatarUrl": "…", "hasUploadedPicture": true, "googleAvatarUrl": "https://lh3.googleusercontent.com/…",
+  "memberSince": "2026-02-11T09:12:00.000Z", "memberSinceLabel": "fevral 2026",
   "counts": { "hostingUpcoming": 2, "hostedPast": 7, "joinedUpcoming": 1, "played": 14 },
   "stats": {
     "totalPlayed": 21,
@@ -340,6 +341,8 @@ also hands the client `role`, `googleId`, `loginAttempts` and `lockUntil`.
 - `stats.playedBySport` counts both, per sport, so it adds up to `stats.totalPlayed` =
   `played + hostedPast`.
 - `memberSinceLabel` is the Baku calendar month the account was created, for "Qeydiyyat: fevral 2026".
+- `avatarUrl` is the uploaded picture if there is one (`hasUploadedPicture`), else the Google picture
+  saved at sign-in (`googleAvatarUrl`), else `null` (show `initials`).
 
 ### `PATCH /api/v1/me`
 
@@ -358,12 +361,14 @@ identity. A body with only those comes back as `NOTHING_TO_UPDATE`.
 | 400    | `INVALID_NAME`       | Empty, or over 120 characters               |
 | 400    | `INVALID_PHONE`      | Not an Azerbaijani number                   |
 | 400    | `INVALID_MEDIA`      | `profilePictureId` is not a valid upload id |
-| 400    | `MEDIA_NOT_FOUND`    | That upload does not exist                  |
+| 400    | `MEDIA_NOT_FOUND`    | No such upload, or one this user did not upload |
 | 400    | `NOTHING_TO_UPDATE`  | No editable field was sent                  |
 | 409    | `PHONE_TAKEN`        | Another account already holds that number   |
 
-Uploading the picture itself is Payload's `POST /api/media` (signed-in only); send the returned id
-as `profilePictureId`.
+Uploading the picture itself is Payload's `POST /api/media` (signed-in only, see [Uploads](#uploads));
+send the returned id as `profilePictureId`. Only an upload of the user's own is accepted — a venue photo
+or someone else's avatar gets `MEDIA_NOT_FOUND`, as if it did not exist. The picture it replaces (or
+that `null` removes) is deleted, file and all, when this user uploaded it.
 
 ### `DELETE /api/v1/me`
 
@@ -372,7 +377,8 @@ ON DELETE SET NULL and `host` is a required field, so removing the user alone wo
 games with no host — records nobody can edit or delete, still listed and still carrying a contact
 number. Their participants go too, and so do this user's own participations. Each spot the user
 held in someone else's upcoming game is handed back, as if they had left it; past games keep their
-numbers. One transaction.
+numbers. One transaction. The pictures the user uploaded are deleted after it commits (files can't
+be rolled back).
 
 Returns `{ "ok": true, "deletedGames": 1 }` and clears both session cookies.
 
@@ -428,6 +434,19 @@ the `/admin` panel, but no public screen uses it.
   Everything the app renders from it (avatar stacks, counts, "my games") runs with `overrideAccess`,
   so this only closes the REST route that let anyone enumerate one person's games.
 - GraphQL is disabled (`graphQL: { disable: true }`): `/api/v1` is the only data surface.
+
+## Uploads
+
+`POST /api/media` (multipart: `file`, plus `_payload` = `{"alt": "…"}`) is open to any signed-in user.
+
+- **Types:** JPEG, PNG and WebP only (`400` otherwise). SVG is refused because it is a document that
+  can carry script and would be served from the site's own origin.
+- **Size:** at most 4 MB (`413`, "Şəkil 4 MB-dan böyük ola bilməz."), below Vercel's 4.5 MB request
+  limit, which would otherwise answer with a bare error page.
+- **Ownership:** the server records the uploader in `uploadedBy` and ignores any value sent. Only the
+  uploader or an admin can `PATCH` or `DELETE /api/media/{id}`; everyone else gets `403`. Uploads from
+  before `uploadedBy` existed (migration `20260925_065346_media_uploaded_by`) belong to nobody, so only
+  admins can change them.
 
 ## Images
 
