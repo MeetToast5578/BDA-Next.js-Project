@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react'
 
 import formStyles from '@/components/create/GameForm.module.css'
 import carousel from '@/components/home/TicketCarousel.module.css'
+import profile from '@/components/profile/Profile.module.css'
 import form from '@/components/ui/form.module.css'
 import card from './GameCard.module.css'
 import detail from './GameDetail.module.css'
@@ -267,5 +268,101 @@ export function GameFormSkeleton() {
       </div>
       <Bone className={sk.block} style={{ height: 52 }} />
     </div>
+  )
+}
+
+/** The identity panel of either profile page: photo, name and a few facts. */
+function ProfileIdentitySkeleton({ facts, action }: { facts: number; action: boolean }) {
+  return (
+    <div className={`${detail.panel} ${profile.identity}`}>
+      <Bone className={sk.circle} style={{ width: 96, height: 96 }} />
+      <div className={profile.identityText}>
+        <Bone className={sk.lineLg} style={{ width: 220, height: 30 }} />
+        <div className={sk.stack} style={{ gap: 12, paddingTop: 4 }}>
+          {Array.from({ length: facts }, (_, index) => (
+            <Bone key={index} className={sk.line} style={{ width: [190, 150, 170][index % 3] }} />
+          ))}
+        </div>
+        {action && <Bone className={sk.pill} style={{ width: 176, height: 42, marginTop: 8 }} />}
+      </div>
+    </div>
+  )
+}
+
+function StatTilesSkeleton({ count }: { count: number }) {
+  return (
+    <div className={profile.tiles} style={{ '--tiles': count } as CSSProperties}>
+      {Array.from({ length: count }, (_, index) => (
+        <div key={index} className={sk.stack} style={{ gap: 8 }}>
+          <Bone style={{ width: 44, height: 34 }} />
+          <Bone className={sk.line} style={{ width: '75%', height: 12 }} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** "Profilim" below its title: identity and stats, then the games tabs and the first cards. */
+export function ProfileSkeleton() {
+  return (
+    <>
+      <div className={profile.overview} aria-busy="true">
+        <ProfileIdentitySkeleton facts={3} action />
+        <div className={detail.panel}>
+          <Bone className={sk.line} style={{ width: 96 }} />
+          <StatTilesSkeleton count={3} />
+          <hr className={profile.divider} />
+          <div className={profile.sports}>
+            {[0, 1, 2].map((index) => (
+              <div key={index} className={profile.sport}>
+                <Bone className={sk.line} style={{ width: 90 }} />
+                <Bone className={sk.bar} style={{ height: 8 }} />
+                <Bone className={sk.line} style={{ width: 16, justifySelf: 'end' }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className={profile.games} aria-busy="true">
+        <h2 className={section.title}>Mənim oyunlarım</h2>
+        <div className={profile.tabs}>
+          <ul className={profile.roleTabs}>
+            {[0, 1].map((index) => (
+              <li key={index}>
+                <span className={`${tabs.tab} ${sk.inert}`}>
+                  <Bone className={sk.tabEmoji} />
+                  <Bone className={sk.line} style={{ width: 150, height: 18 }} />
+                  <Bone className={sk.line} style={{ width: 110, height: 15 }} />
+                </span>
+              </li>
+            ))}
+          </ul>
+          <div className={profile.segments}>
+            <Bone style={{ height: 40, borderRadius: 10 }} />
+            <Bone style={{ height: 40, borderRadius: 10 }} />
+          </div>
+        </div>
+        <GamesGridSkeleton count={3} />
+      </div>
+    </>
+  )
+}
+
+/** A player's public profile below its page label: identity and hosting stats, then their games. */
+export function PublicProfileSkeleton() {
+  return (
+    <>
+      <div className={profile.overview} aria-busy="true">
+        <ProfileIdentitySkeleton facts={1} action={false} />
+        <div className={detail.panel}>
+          <Bone className={sk.line} style={{ width: 96 }} />
+          <StatTilesSkeleton count={2} />
+        </div>
+      </div>
+      <div className={profile.hosted} aria-busy="true">
+        <Bone className={sk.lineLg} style={{ width: 260, height: 34 }} />
+        <GamesGridSkeleton count={3} />
+      </div>
+    </>
   )
 }

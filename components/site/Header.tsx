@@ -42,7 +42,8 @@ async function SessionActions() {
 
   return (
     <>
-      <span className={styles.user}>
+      {/* The name is hidden on narrower bars, so the label carries it; it starts with "Profilim". */}
+      <NavLink href="/profile" className={styles.user} ariaLabel={`Profilim — ${user.fullName}`}>
         <Avatar
           person={{ name: user.fullName, initials: user.initials, avatarUrl: user.avatarUrl }}
           size={34}
@@ -50,7 +51,7 @@ async function SessionActions() {
           className={styles.avatar}
         />
         <span className={styles.userName}>{user.firstName}</span>
-      </span>
+      </NavLink>
       <LogoutButton className={buttonClass('outlineDark', 'md')} />
     </>
   )
