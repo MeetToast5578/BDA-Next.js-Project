@@ -15,10 +15,14 @@ import { Modal } from '@/components/ui/Modal'
 import { PhoneInput } from '@/components/ui/PhoneInput'
 import { Avatar } from './bits'
 import styles from './JoinPanel.module.css'
+import { LeaveGame } from './LeaveGame'
 import { STATUS_LABELS } from './sports'
 
 /** Errors after which the page data is stale (spot taken, already a player, game closed). */
 const REFRESH_ON = new Set(['ALREADY_JOINED', 'GAME_FULL', 'GAME_NOT_JOINABLE'])
+
+/** A game that hasn't started, which a player may still leave. */
+const LEAVABLE = new Set(['open', 'full'])
 
 const NAME_ERROR = 'Ad və soyadınızı daxil edin.'
 
@@ -48,6 +52,8 @@ export function JoinPanel({ game, user, autoOpen }: { game: GameDetail; user: Cu
   const [pending, setPending] = useState(false)
   // Set the moment the join succeeds, so the button can't be pressed again while the page refreshes.
   const [justJoined, setJustJoined] = useState(false)
+  // Announced here rather than by LeaveGame, which is gone once the page shows "Qoşul" again.
+  const [leftMessage, setLeftMessage] = useState('')
   const [, startRefresh] = useTransition()
   const joined = game.viewer.joined || justJoined
 
@@ -96,6 +102,7 @@ export function JoinPanel({ game, user, autoOpen }: { game: GameDetail; user: Cu
         phone: normalizePhone(`${PHONE_PREFIX}${phone}`),
       })
       setJustJoined(true)
+      setLeftMessage('')
       setOpen(false)
       // Brings in the new player count and the host's phone, which only joined players see.
       startRefresh(() => router.refresh())
@@ -130,12 +137,24 @@ export function JoinPanel({ game, user, autoOpen }: { game: GameDetail; user: Cu
       {game.viewer.isHost ? (
         <p className={styles.state}>Bu oyunun hostu sizsiniz</p>
       ) : joined ? (
-        <p className={`${styles.state} ${styles.joined}`} role={justJoined ? 'status' : undefined}>
-          <span className={`${styles.check} ${justJoined ? styles.checkPop : ''}`} aria-hidden="true">
-            ✓
-          </span>
-          Siz bu oyuna qoşulmusunuz
-        </p>
+        <>
+          <p className={`${styles.state} ${styles.joined}`} role={justJoined ? 'status' : undefined}>
+            <span className={`${styles.check} ${justJoined ? styles.checkPop : ''}`} aria-hidden="true">
+              ✓
+            </span>
+            Siz bu oyuna qoşulmusunuz
+          </p>
+          {/* Until kick-off a player can give the spot back; the refresh after it shows "Qoşul" again. */}
+          {LEAVABLE.has(game.status) && (
+            <LeaveGame
+              gameId={game.id}
+              onLeft={() => {
+                setJustJoined(false)
+                setLeftMessage('Oyundan çıxdınız. Yeriniz digər oyunçulara açıldı.')
+              }}
+            />
+          )}
+        </>
       ) : game.status !== 'open' ? (
         <button type="button" className={buttonClass('muted', 'lg', { block: true, className: styles.cta })} disabled>
           {STATUS_LABELS[game.status]}
@@ -154,6 +173,10 @@ export function JoinPanel({ game, user, autoOpen }: { game: GameDetail; user: Cu
           </button>
         </div>
       )}
+
+      <p className="visually-hidden" role="status">
+        {leftMessage}
+      </p>
 
       <Modal
         open={open}
