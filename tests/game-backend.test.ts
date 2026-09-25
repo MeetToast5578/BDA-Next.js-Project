@@ -26,10 +26,13 @@ import {
   toPlayer,
 } from '@/lib/game-backend'
 import {
+  addDays,
+  addMonths,
   formatDateInput,
   formatDateText,
   formatTimeInput,
   formatTimeText,
+  monthCells,
   parseDateText,
   parseTimeText,
 } from '@/lib/date-input'
@@ -319,6 +322,19 @@ describe('typed date and time', () => {
     // In the 12-hour format, 19:30 is still unambiguous; 7:30 without AM/PM is not.
     expect(parseTimeText('19:30', '12h')).toBe('19:30')
     expect(parseTimeText('7:30', '12h')).toBeNull()
+  })
+
+  it('lays a month out Monday first, with month and year rollover', () => {
+    // 1 September 2026 is a Tuesday: one blank, then 30 days.
+    const september = monthCells('2026-09')
+    expect(september.slice(0, 2)).toEqual([null, '2026-09-01'])
+    expect(september.filter(Boolean)).toHaveLength(30)
+    expect(monthCells('2028-02').filter(Boolean)).toHaveLength(29)
+    expect(monthCells('2026-06')[0]).toBe('2026-06-01') // a Monday: no blanks
+    expect(addMonths('2026-12', 1)).toBe('2027-01')
+    expect(addMonths('2026-01', -1)).toBe('2025-12')
+    expect(addDays('2026-09-30', 1)).toBe('2026-10-01')
+    expect(addDays('2027-01-01', -1)).toBe('2026-12-31')
   })
 
   it('masks a date as it is typed, in the chosen format', () => {

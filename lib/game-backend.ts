@@ -56,10 +56,10 @@ const DAY_MS = 24 * HOUR_MS
 const BAKU_OFFSET_MS = 4 * HOUR_MS
 
 // Short forms as used on the game cards ("Cüm, 2 Avq"); ICU's az-AZ short forms ("B.", "avq") differ.
-const WEEKDAYS_SHORT = ['Baz', 'B.e.', 'Ç.a.', 'Çər', 'C.a.', 'Cüm', 'Şən']
+export const WEEKDAYS_SHORT = ['Baz', 'B.e.', 'Ç.a.', 'Çər', 'C.a.', 'Cüm', 'Şən']
 const MONTHS_SHORT = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'İyn', 'İyl', 'Avq', 'Sen', 'Okt', 'Noy', 'Dek']
 // Spelled out rather than taken from ICU, so the label is the same whatever ICU build the server runs.
-const MONTHS_LONG = [
+export const MONTHS_LONG = [
   'yanvar',
   'fevral',
   'mart',

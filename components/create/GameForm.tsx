@@ -39,6 +39,8 @@ import { PhoneInput } from '@/components/ui/PhoneInput'
 import { PhoneProfileNote } from '@/components/ui/PhoneProfileNote'
 import danger from '@/components/ui/danger.module.css'
 import styles from './GameForm.module.css'
+import { CalendarPopover, TimePopover } from './Pickers'
+import pickers from './Pickers.module.css'
 import { VenuePicker } from './VenuePicker'
 
 type Field = 'hostPhone' | 'venue' | 'date' | 'time' | 'currentCount' | 'maxCount' | 'title'
@@ -125,15 +127,6 @@ function Stepper({
   )
 }
 
-/** Opens the browser's own date/time picker for a (hidden) native input. */
-function openPicker(input: HTMLInputElement | null) {
-  try {
-    input?.showPicker()
-  } catch {
-    // showPicker() is missing in older browsers; typing the value still works there.
-  }
-}
-
 /**
  * "Yeni Oyun Yarat": a single column of full-width cards with "Oyunu dərc et" underneath.
  * All form state lives here, so sport and level selection have one source of truth.
@@ -177,8 +170,12 @@ export function GameForm({
   )
   const date = parseDateText(dateText, dateFormat) ?? ''
   const time = parseTimeText(timeText, timeFormat) ?? ''
-  const datePicker = useRef<HTMLInputElement>(null)
-  const timePicker = useRef<HTMLInputElement>(null)
+  // Which popover is open, and whether it was opened from its button (so focus moves into it).
+  const [picker, setPicker] = useState<{ field: 'date' | 'time'; fromButton: boolean } | null>(null)
+  const dateField = useRef<HTMLDivElement>(null)
+  const timeField = useRef<HTMLDivElement>(null)
+  const dateButton = useRef<HTMLButtonElement>(null)
+  const timeButton = useRef<HTMLButtonElement>(null)
   // The host is the first player, so at least one spot is taken.
   // Both counts are set with − / + steppers only, so they are always in range: current from 1 to
   // maxCount − 1, max even and within the sport's limit.
@@ -256,6 +253,16 @@ export function GameForm({
     if (time) setTimeText(formatTimeText(time, next))
     setTimeFormat(next)
     setErrors((current) => ({ ...current, time: undefined }))
+  }
+
+  function togglePicker(field: 'date' | 'time') {
+    setPicker((current) => (current?.field === field ? null : { field, fromButton: true }))
+  }
+
+  function closePicker(refocus: boolean) {
+    const button = picker?.field === 'date' ? dateButton.current : timeButton.current
+    setPicker(null)
+    if (refocus) button?.focus()
   }
 
   function validate(): Errors {
@@ -433,26 +440,27 @@ export function GameForm({
           />
 
           <div className={form.row}>
-            {/* Typed text fields with a format picker; the button opens the browser's own picker. */}
+            {/* Typed text fields with a format picker; the button (or a click in the field) opens a popover. */}
             <div className={form.field}>
               <div className={styles.labelRow}>
                 <label htmlFor={ids.date} className={form.labelSmall}>
                   Tarix
                 </label>
-                <select
-                  className={styles.formatSelect}
-                  aria-label="Tarix formatı"
-                  value={dateFormat}
-                  onChange={(event) => changeDateFormat(event.target.value as DateFormat)}
-                >
-                  {Object.entries(DATE_FORMATS).map(([value, { label }]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
+                <span className={pickers.select}>
+                  <select
+                    aria-label="Tarix formatı"
+                    value={dateFormat}
+                    onChange={(event) => changeDateFormat(event.target.value as DateFormat)}
+                  >
+                    {Object.entries(DATE_FORMATS).map(([value, { label }]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </span>
               </div>
-              <div className={form.inputWrap}>
+              <div ref={dateField} className={form.inputWrap}>
                 <input
                   id={ids.date}
                   className={`${form.input} ${form.inputCompact} ${form.withIcon}`}
@@ -460,33 +468,39 @@ export function GameForm({
                   placeholder={DATE_FORMATS[dateFormat].label}
                   value={dateText}
                   onChange={edit('date', (value) => setDateText(formatDateInput(value, dateFormat)))}
+                  onClick={() => setPicker({ field: 'date', fromButton: false })}
                   onBlur={tidyDate}
                   required
                   aria-invalid={invalid('date')}
                   aria-describedby={describe('date', ids.date)}
                 />
-                <input
-                  ref={datePicker}
-                  type="date"
-                  className={styles.nativePicker}
-                  tabIndex={-1}
-                  aria-hidden="true"
-                  min={today}
-                  value={date}
-                  onChange={(event) => {
-                    if (!event.target.value) return
-                    setDateText(formatDateText(event.target.value, dateFormat))
-                    setErrors((current) => ({ ...current, date: undefined }))
-                  }}
-                />
                 <button
+                  ref={dateButton}
                   type="button"
                   className={styles.pickerButton}
-                  onClick={() => openPicker(datePicker.current)}
+                  onClick={() => togglePicker('date')}
                   aria-label="Təqvimdən seç"
+                  aria-haspopup="dialog"
+                  aria-expanded={picker?.field === 'date'}
+                  aria-controls={`${ids.date}-picker`}
                 >
                   <Icon name="calendar" />
                 </button>
+                {picker?.field === 'date' && (
+                  <CalendarPopover
+                    id={`${ids.date}-picker`}
+                    anchor={dateField}
+                    autoFocus={picker.fromButton}
+                    onClose={closePicker}
+                    value={date}
+                    today={today}
+                    onSelect={(next) => {
+                      setDateText(formatDateText(next, dateFormat))
+                      setErrors((current) => ({ ...current, date: undefined }))
+                      closePicker(true)
+                    }}
+                  />
+                )}
               </div>
               {fieldError('date', ids.date)}
             </div>
@@ -495,20 +509,22 @@ export function GameForm({
                 <label htmlFor={ids.time} className={form.labelSmall}>
                   Saat
                 </label>
-                <select
-                  className={styles.formatSelect}
-                  aria-label="Saat formatı"
-                  value={timeFormat}
-                  onChange={(event) => changeTimeFormat(event.target.value as TimeFormat)}
-                >
+                <div className={pickers.toggle} role="radiogroup" aria-label="Saat formatı">
                   {Object.entries(TIME_FORMATS).map(([value, { label }]) => (
-                    <option key={value} value={value}>
+                    <label key={value} className={pickers.toggleOption}>
+                      <input
+                        type="radio"
+                        name={`${ids.time}-format`}
+                        value={value}
+                        checked={timeFormat === value}
+                        onChange={() => changeTimeFormat(value as TimeFormat)}
+                      />
                       {label}
-                    </option>
+                    </label>
                   ))}
-                </select>
+                </div>
               </div>
-              <div className={form.inputWrap}>
+              <div ref={timeField} className={form.inputWrap}>
                 <input
                   id={ids.time}
                   className={`${form.input} ${form.inputCompact} ${form.withIcon}`}
@@ -516,33 +532,41 @@ export function GameForm({
                   placeholder={`məs. ${TIME_FORMATS[timeFormat].example}`}
                   value={timeText}
                   onChange={edit('time', (value) => setTimeText(formatTimeInput(value)))}
+                  onClick={() => setPicker({ field: 'time', fromButton: false })}
                   onBlur={tidyTime}
                   required
                   aria-invalid={invalid('time')}
                   aria-describedby={describe('time', ids.time)}
                 />
-                <input
-                  ref={timePicker}
-                  type="time"
-                  className={styles.nativePicker}
-                  tabIndex={-1}
-                  aria-hidden="true"
-                  step={300}
-                  value={time}
-                  onChange={(event) => {
-                    if (!event.target.value) return
-                    setTimeText(formatTimeText(event.target.value, timeFormat))
-                    setErrors((current) => ({ ...current, time: undefined }))
-                  }}
-                />
                 <button
+                  ref={timeButton}
                   type="button"
                   className={styles.pickerButton}
-                  onClick={() => openPicker(timePicker.current)}
+                  onClick={() => togglePicker('time')}
                   aria-label="Saatı seç"
+                  aria-haspopup="dialog"
+                  aria-expanded={picker?.field === 'time'}
+                  aria-controls={`${ids.time}-picker`}
                 >
                   <Icon name="clock" />
                 </button>
+                {picker?.field === 'time' && (
+                  <TimePopover
+                    id={`${ids.time}-picker`}
+                    anchor={timeField}
+                    autoFocus={picker.fromButton}
+                    onClose={closePicker}
+                    align="end"
+                    value={time}
+                    format={timeFormat}
+                    isPast={(candidate) => date !== '' && hasPassed(date, candidate)}
+                    onSelect={(next, done) => {
+                      setTimeText(formatTimeText(next, timeFormat))
+                      setErrors((current) => ({ ...current, time: undefined }))
+                      if (done) closePicker(true)
+                    }}
+                  />
+                )}
               </div>
               {fieldError('time', ids.time)}
             </div>
