@@ -2,20 +2,13 @@
   padding-block: 34px 96px;
 }
 
-.back {
-  display: inline-flex;
-  gap: 6px;
-  border-radius: 4px;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 16px;
-  color: var(--color-muted);
+/* The back link's look comes from buttonClass (via BackLink); this only nudges its arrow. */
+.back > span {
+  transition: transform 0.2s var(--ease-out);
 }
 
-.back:hover {
-  color: var(--color-ink);
-  text-decoration: underline;
-  text-underline-offset: 3px;
+.back:hover > span {
+  transform: translateX(-3px);
 }
 
 .intro {

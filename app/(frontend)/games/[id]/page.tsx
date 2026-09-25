@@ -156,24 +156,34 @@ async function GameDetailContent({ params, searchParams }: Props) {
           <h2 id="host-title" className={styles.panelLabel}>
             Host
           </h2>
-          <div className={styles.host}>
-            <Avatar person={host} size={42} decorative />
-            <p className={styles.hostName}>
-              {host.id ? (
-                <Link href={`/users/${host.id}`} className={styles.hostLink}>
-                  {host.name}
-                </Link>
-              ) : (
-                host.name
-              )}
-            </p>
-          </div>
+          {host.id ? (
+            <Link href={`/users/${host.id}`} className={`${styles.host} ${styles.hostLink}`}>
+              <Avatar person={host} size={42} decorative />
+              <span className={styles.hostName}>{host.name}</span>
+              <span className={styles.hostArrow} aria-hidden="true">
+                →
+              </span>
+            </Link>
+          ) : (
+            <div className={styles.host}>
+              <Avatar person={host} size={42} decorative />
+              <p className={styles.hostName}>{host.name}</p>
+            </div>
+          )}
           {host.phone ? (
             <>
-              <a className={styles.phone} href={`tel:${host.phone}`}>
-                <span className="visually-hidden">Hostun nömrəsi:</span>
-                {formatPhone(host.phone)}
-              </a>
+              {/* Players get a tap-to-call link; the host is looking at their own number, so it is plain text. */}
+              {game.viewer.isHost ? (
+                <p className={styles.phone}>
+                  <span className="visually-hidden">Nömrəniz:</span>
+                  {formatPhone(host.phone)}
+                </p>
+              ) : (
+                <a className={styles.phone} href={`tel:${host.phone}`}>
+                  <span className="visually-hidden">Hostun nömrəsi:</span>
+                  {formatPhone(host.phone)}
+                </a>
+              )}
               <p className={styles.hostNote}>
                 {game.viewer.isHost
                   ? 'Oyunu siz yaratmısınız · Bu nömrə qoşulan oyunçulara görünür'

@@ -72,19 +72,58 @@
 
 .link {
   position: relative;
-  padding-block: 6px;
-  border-radius: 4px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
   font-size: 14.5px;
   font-weight: 500;
   color: var(--color-ink);
 }
 
+/*
+ * Hover draws an orange outline around the link: a 2px ring (padding + mask cut-out) filled by a
+ * conic gradient whose arc grows from the bottom centre up both sides until they meet at the top.
+ * --sweep has to be a registered property, or the gradient would jump instead of animating.
+ */
+@property --sweep {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.link::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 2px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from 180deg,
+    var(--color-accent) var(--sweep),
+    transparent 0 calc(360deg - var(--sweep)),
+    var(--color-accent) 0
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+  pointer-events: none;
+  transition: --sweep 0.4s var(--ease-out);
+}
+
+.link:hover::before {
+  --sweep: 180deg;
+}
+
+/* The current page keeps its underline, under the text only. */
 .link::after {
   content: '';
   position: absolute;
-  right: 0;
+  right: 14px;
   bottom: 0;
-  left: 0;
+  left: 14px;
   height: 2px;
   border-radius: 2px;
   background: var(--color-accent);
@@ -92,7 +131,6 @@
   transition: transform 0.2s ease;
 }
 
-.link:hover::after,
 .link[aria-current='page']::after {
   transform: scaleX(1);
 }
