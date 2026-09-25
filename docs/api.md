@@ -26,7 +26,7 @@ Errors always have the shape:
 | Yeni Oyun Yarat: "Oyunu dərc et"        | `POST /api/v1/games`                                 |
 | Oyunu redaktə et (host only)            | `PATCH /api/v1/games/{id}`                           |
 | Oyunu sil (host only)                   | `DELETE /api/v1/games/{id}`                          |
-| Oyundan çıx                             | `POST /api/v1/games/{id}/leave`                      |
+| Oyundan çıx (game page, profile cards)  | `POST /api/v1/games/{id}/leave`                      |
 | Profil                                  | `GET` / `PATCH` / `DELETE /api/v1/me`                |
 | Mənim oyunlarım                         | `GET /api/v1/me/games?role=…&when=…`                 |
 | Başqa oyunçunun profili                 | `GET /api/v1/users/{id}`                             |
@@ -326,8 +326,9 @@ form don't keep showing the session it had cached.
 
 ## `POST /api/v1/games/{id}/leave`
 
-"Oyundan çıx". Requires a signed-in user and hands the spot back to the game. Allowed right up to
-kick-off. The host cannot leave their own game — they delete it instead.
+"Oyundan çıx", on the game page and on the profile's "Qoşulduğum · Qarşıdakı" cards. Requires a
+signed-in user and hands the spot back to the game. Allowed right up to kick-off. The host cannot
+leave their own game — they delete it instead.
 
 The participant row is deleted first, and the spot only returned when that DELETE actually removed
 something, so calling this repeatedly cannot push `available_players` past `max_players` and invent
