@@ -6,12 +6,13 @@ import { useEffect, useId, useState, useTransition } from 'react'
 import { ApiError, postJson } from '@/lib/api-client'
 import type { CurrentUser, GameDetail } from '@/lib/api-types'
 import { normalizePhone } from '@/lib/game-backend'
-import { formatLocalPhone, PHONE_ERROR, PHONE_PLACEHOLDER, PHONE_PREFIX } from '@/lib/phone'
+import { formatLocalPhone, PHONE_ERROR, PHONE_PREFIX } from '@/lib/phone'
 import { loginHref } from '@/lib/safe-redirect'
 import { buttonClass } from '@/components/ui/button'
 import form from '@/components/ui/form.module.css'
 import { Icon } from '@/components/ui/Icon'
 import { Modal } from '@/components/ui/Modal'
+import { PhoneInput } from '@/components/ui/PhoneInput'
 import { Avatar } from './bits'
 import styles from './JoinPanel.module.css'
 import { STATUS_LABELS } from './sports'
@@ -194,30 +195,17 @@ export function JoinPanel({ game, user, autoOpen }: { game: GameDetail; user: Cu
               <label htmlFor={`${id}-phone`} className={form.labelSmall}>
                 Telefon nömrəsi
               </label>
-              <div className={form.inputWrap}>
-                <span id={`${id}-phone-prefix`} className={form.prefix}>
-                  {PHONE_PREFIX}
-                </span>
-                {/* No maxLength: it would cut a pasted "+994 77 538 60 04" before formatLocalPhone sees it. */}
-                <input
-                  id={`${id}-phone`}
-                  className={`${form.input} ${form.withPrefix}`}
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  placeholder={PHONE_PLACEHOLDER}
-                  value={phone}
-                  onChange={(event) => {
-                    setPhone(formatLocalPhone(event.target.value))
-                    if (errors.phone) setErrors((current) => ({ ...current, phone: undefined }))
-                  }}
-                  required
-                  aria-invalid={errors.phone ? true : undefined}
-                  aria-describedby={[`${id}-phone-prefix`, errors.phone ? `${id}-phone-error` : '']
-                    .filter(Boolean)
-                    .join(' ')}
-                />
-              </div>
+              <PhoneInput
+                id={`${id}-phone`}
+                value={phone}
+                onChange={(value) => {
+                  setPhone(value)
+                  if (errors.phone) setErrors((current) => ({ ...current, phone: undefined }))
+                }}
+                required
+                invalid={Boolean(errors.phone)}
+                describedBy={errors.phone ? `${id}-phone-error` : undefined}
+              />
               {fieldError('phone')}
             </div>
 

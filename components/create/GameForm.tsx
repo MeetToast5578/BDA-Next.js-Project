@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useId, useRef, useState } from 'react'
 
-import { apiFetch, ApiError, postJson } from '@/lib/api-client'
+import { apiFetch, ApiError, patchJson, postJson } from '@/lib/api-client'
 import type { CreateGameRequest, CurrentUser, GameDetail, Venue } from '@/lib/api-types'
 import {
   DATE_FORMATS,
@@ -26,13 +26,15 @@ import {
   PLAYER_COUNT_STEP,
   SPORT_META,
 } from '@/lib/game-backend'
-import { formatLocalPhone, PHONE_ERROR, PHONE_PLACEHOLDER, PHONE_PREFIX } from '@/lib/phone'
+import { formatLocalPhone, PHONE_ERROR, PHONE_PREFIX } from '@/lib/phone'
 import { loginHref } from '@/lib/safe-redirect'
 import { LEVEL_OPTIONS, SPORT_EMOJI, SPORT_LABELS, SPORT_ORDER } from '@/components/games/sports'
 import { buttonClass } from '@/components/ui/button'
 import form from '@/components/ui/form.module.css'
 import { Icon } from '@/components/ui/Icon'
 import { Modal } from '@/components/ui/Modal'
+import { PhoneInput } from '@/components/ui/PhoneInput'
+import danger from '@/components/ui/danger.module.css'
 import styles from './GameForm.module.css'
 import { VenuePicker } from './VenuePicker'
 
@@ -289,10 +291,7 @@ export function GameForm({
     setPending(true)
     try {
       const saved = editing
-        ? await apiFetch<{ game: GameDetail }>(`/api/v1/games/${game.id}`, {
-            method: 'PATCH',
-            body: JSON.stringify(body),
-          })
+        ? await patchJson<{ game: GameDetail }>(`/api/v1/games/${game.id}`, body)
         : await postJson<{ game: GameDetail }>('/api/v1/games', body)
       router.push(`/games/${saved.game.id}`)
       router.refresh()
@@ -359,25 +358,18 @@ export function GameForm({
               <label htmlFor={ids.phone} className={form.labelSmall}>
                 Host telefon nömrəsi
               </label>
-              <div className={form.inputWrap}>
-                <span id={`${ids.phone}-prefix`} className={form.prefix}>
-                  {PHONE_PREFIX}
-                </span>
-                {/* No maxLength: it would cut a pasted "+994 77 538 60 04" before formatLocalPhone sees it. */}
-                <input
-                  id={ids.phone}
-                  className={`${form.input} ${form.inputCompact} ${form.withPrefix}`}
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  placeholder={PHONE_PLACEHOLDER}
-                  value={hostPhone}
-                  onChange={edit('hostPhone', (value) => setHostPhone(formatLocalPhone(value)))}
-                  required
-                  aria-invalid={invalid('hostPhone')}
-                  aria-describedby={[`${ids.phone}-prefix`, describe('hostPhone', ids.phone)].filter(Boolean).join(' ')}
-                />
-              </div>
+              <PhoneInput
+                id={ids.phone}
+                compact
+                value={hostPhone}
+                onChange={(value) => {
+                  setHostPhone(value)
+                  if (errors.hostPhone) setErrors((current) => ({ ...current, hostPhone: undefined }))
+                }}
+                required
+                invalid={invalid('hostPhone')}
+                describedBy={describe('hostPhone', ids.phone)}
+              />
               {fieldError('hostPhone', ids.phone)}
             </div>
           </div>
@@ -677,11 +669,11 @@ export function GameForm({
   return (
     <>
       {formBody}
-      <section className={styles.dangerZone} aria-labelledby="danger-zone">
-        <h2 id="danger-zone" className={styles.dangerTitle}>
+      <section className={danger.dangerZone} aria-labelledby="danger-zone">
+        <h2 id="danger-zone" className={danger.dangerTitle}>
           Oyunu sil
         </h2>
-        <p className={styles.dangerText}>
+        <p className={danger.dangerText}>
           Oyun birdəfəlik silinir və qoşulan {game.currentCount} oyunçu yerini itirir. Bu əməliyyat geri qaytarıla
           bilməz.
         </p>
@@ -692,7 +684,7 @@ export function GameForm({
         )}
         <button
           type="button"
-          className={buttonClass('danger', 'lg', { className: styles.dangerButton })}
+          className={buttonClass('danger', 'lg', { className: danger.dangerButton })}
           onClick={() => {
             setDeleteError(null)
             setConfirmOpen(true)
@@ -710,8 +702,8 @@ export function GameForm({
         }}
         title="Oyunu silmək istəyirsiniz?"
       >
-        <div className={styles.confirm}>
-          <p className={styles.dangerText}>
+        <div className={danger.confirm}>
+          <p className={danger.dangerText}>
             <strong>{game.title}</strong> silinəcək və qoşulan {game.currentCount} oyunçu yerini itirəcək. Bu
             əməliyyat geri qaytarıla bilməz.
           </p>
@@ -720,7 +712,7 @@ export function GameForm({
               {deleteError}
             </p>
           )}
-          <div className={styles.confirmActions}>
+          <div className={danger.confirmActions}>
             {/* Focus starts on the way out, so Enter never deletes a game by accident. */}
             <button
               type="button"

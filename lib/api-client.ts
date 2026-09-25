@@ -20,12 +20,14 @@ type V1ErrorBody = { error?: { code?: string; message?: string } }
 const GENERIC_MESSAGE = 'Xəta baş verdi. Bir az sonra yenidən cəhd edin.'
 
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+  // A file upload's multipart boundary is set by the browser, so FormData must go without a type.
+  const json = Boolean(init.body) && !(init.body instanceof FormData)
   let response: Response
   try {
     response = await fetch(path, {
       ...init,
       credentials: 'same-origin',
-      headers: { Accept: 'application/json', ...(init.body ? { 'Content-Type': 'application/json' } : {}), ...init.headers },
+      headers: { Accept: 'application/json', ...(json ? { 'Content-Type': 'application/json' } : {}), ...init.headers },
     })
   } catch {
     throw new ApiError('İnternet bağlantısını yoxlayın və yenidən cəhd edin.', 'NETWORK_ERROR', 0)
@@ -48,6 +50,10 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
 
 export function postJson<T>(path: string, data?: unknown) {
   return apiFetch<T>(path, { method: 'POST', body: data === undefined ? undefined : JSON.stringify(data) })
+}
+
+export function patchJson<T>(path: string, data: unknown) {
+  return apiFetch<T>(path, { method: 'PATCH', body: JSON.stringify(data) })
 }
 
 /** Builds "/path?a=1&b=2", skipping empty values. */

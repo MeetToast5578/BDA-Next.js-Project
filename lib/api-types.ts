@@ -9,6 +9,8 @@ export type GameCard = ReturnType<typeof toGameCard>
 export type FeaturedGame = Awaited<ReturnType<typeof getFeaturedGames>>[number]
 export type GameDetail = NonNullable<Awaited<ReturnType<typeof getGameDetail>>>
 export type GameListResponse = Awaited<ReturnType<typeof findGames>>
+/** One page of game cards: `GET /api/v1/games` and `GET /api/v1/me/games` both answer with this. */
+export type GamePage = { games: GameCard[]; pagination: GameListResponse['pagination'] }
 export type SportSummary = ReturnType<typeof countOpenGamesBySport>[number]
 export type Venue = ReturnType<typeof normalizeVenue>
 export type Participant = FeaturedGame['participants']['preview'][number]

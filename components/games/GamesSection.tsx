@@ -109,8 +109,7 @@ export function GamesSection({
           <GamesGrid
             key={sport ?? 'all'}
             initial={list}
-            sport={sport}
-            to={to}
+            query={{ sport, to }}
             cardHeadingLevel={standalone ? 'h2' : 'h3'}
           />
         )}

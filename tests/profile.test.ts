@@ -58,20 +58,26 @@ describe.skipIf(!process.env.DATABASE_URL)('profile backend (Postgres)', () => {
     await payload.db.destroy?.()
   })
 
-  async function makeGame({ owner = host, hoursFromNow = 3, availablePlayers = 5 } = {}) {
+  async function makeGame({
+    owner = host,
+    hoursFromNow = 3,
+    availablePlayers = 5,
+    status = 'scheduled' as 'scheduled' | 'cancelled' | 'finished',
+    sport = 'football' as 'football' | 'basketball' | 'tennis',
+  } = {}) {
     const game = await payload.create({
       collection: 'games',
       overrideAccess: true,
       data: {
         title: `Profile Game ${suffix}`,
-        sport: 'football',
+        sport,
         level: 'medium',
         arena: arenaId,
         host: owner,
         scheduledAt: new Date(Date.now() + hoursFromNow * HOUR_MS).toISOString(),
         maxPlayers: 10,
         availablePlayers,
-        status: 'scheduled',
+        status,
       },
     })
     gameIds.push(game.id)
@@ -180,6 +186,33 @@ describe.skipIf(!process.env.DATABASE_URL)('profile backend (Postgres)', () => {
       expect(profile).not.toHaveProperty('password')
     })
 
+    it('counts played games once, leaves cancelled ones out, and the per-sport stats add up', async () => {
+      const before = (await getMyProfile(host))!
+
+      // Called off: still listed under "Keçmiş", but nobody played it.
+      await makeGame({ owner: host, hoursFromNow: -30, status: 'cancelled' })
+      const afterCancelled = (await getMyProfile(host))!
+      expect(afterCancelled.counts.hostedPast).toBe(before.counts.hostedPast)
+      expect(afterCancelled.stats.totalPlayed).toBe(before.stats.totalPlayed)
+
+      await makeGame({ owner: host, hoursFromNow: -26, sport: 'tennis' })
+      const after = (await getMyProfile(host))!
+      expect(after.counts.hostedPast).toBe(before.counts.hostedPast + 1)
+      expect(after.stats.totalPlayed).toBe(before.stats.totalPlayed + 1)
+      const tennis = (profile: typeof after) => profile.stats.playedBySport.find((s) => s.sport === 'tennis')!.playedCount
+      expect(tennis(after)).toBe(tennis(before) + 1)
+
+      // Hosted and joined games are counted separately, so together they are every game played.
+      expect(after.stats.totalPlayed).toBe(after.counts.played + after.counts.hostedPast)
+      expect(after.memberSinceLabel).toMatch(/^\p{Ll}+ \d{4}$/u)
+    })
+
+    it('still lists a cancelled past game under past games, marked cancelled', async () => {
+      const cancelled = await makeGame({ owner: host, hoursFromNow: -40, status: 'cancelled' })
+      const history = await findMyGames(host, { role: 'hosting', when: 'past', page: 1, limit: 50 })
+      expect(history.games.find((g) => Number(g.id) === cancelled)?.status).toBe('cancelled')
+    })
+
     it('saves a normalized phone and a new name', async () => {
       const result = await updateMyProfile(host, { fullName: 'Yeni Ad', phone: '+994552223344' })
       expect(result.ok).toBe(true)
@@ -259,6 +292,41 @@ describe.skipIf(!process.env.DATABASE_URL)('profile backend (Postgres)', () => {
         overrideAccess: true,
       })
       expect(strays.totalDocs).toBe(0)
+    })
+
+    it("hands the spots it held in other people's upcoming games back, but not in past ones", async () => {
+      const leaving = await payload.create({
+        collection: 'users',
+        overrideAccess: true,
+        data: {
+          email: `profile-${suffix}-leaving@oyunagel.test`,
+          password: 'profile-test-password',
+          fullName: 'Leaving Player',
+        },
+      })
+      const upcoming = await makeGame({ owner: host, availablePlayers: 5 })
+      await claimSpot(payload, upcoming, leaving.id, null, 'Leaving Player')
+      expect(await spotsLeft(upcoming)).toBe(4)
+
+      // Joining a game that already happened isn't possible any more, so the row is written directly.
+      const past = await makeGame({ owner: host, hoursFromNow: -20, availablePlayers: 3 })
+      await payload.create({
+        collection: 'game-participants',
+        overrideAccess: true,
+        data: { game: past, user: leaving.id },
+      })
+
+      await deleteMyAccount(leaving.id)
+
+      expect(await spotsLeft(upcoming)).toBe(5)
+      // The past game's numbers are the record of who played; they stay as they were.
+      expect(await spotsLeft(past)).toBe(3)
+      const rows = await payload.count({
+        collection: 'game-participants',
+        where: { user: { equals: leaving.id } },
+        overrideAccess: true,
+      })
+      expect(rows.totalDocs).toBe(0)
     })
   })
 })

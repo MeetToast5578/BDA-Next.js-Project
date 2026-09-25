@@ -8,19 +8,32 @@ import { CoverImage } from './CoverImage'
 import styles from './GameCard.module.css'
 import { STATUS_LABELS } from './sports'
 
+/**
+ * Which list the card is in, which decides its action. `browse` is the public lists, where an open
+ * game offers "Qoşul". On the profile the viewer is already in `joined` games and runs `hosting`
+ * ones, so offering to join them would be wrong; `past` games have nothing left to do.
+ */
+export type GameCardContext = 'browse' | 'joined' | 'hosting' | 'past'
+
+/** Games whose details the host can still change (the edit page refuses the rest). */
+const EDITABLE = new Set(['open', 'full'])
+
 export function GameCard({
   game,
   priority = false,
   headingLevel = 'h3',
+  context = 'browse',
 }: {
   game: GameCardData
   priority?: boolean
   /** One level below the heading of the list the card is in. */
   headingLevel?: 'h2' | 'h3'
+  context?: GameCardContext
 }) {
   const Heading = headingLevel
   const href = `/games/${game.id}`
   const location = [game.venue.name, game.venue.district].filter(Boolean).join(', ')
+  const past = context === 'past'
 
   return (
     <article className={styles.card}>
@@ -74,11 +87,13 @@ export function GameCard({
             <span className={styles.count}>
               {game.currentCount}/{game.maxCount} oyunçu
             </span>
-            {game.remainingSpots > 0 ? (
-              <span className={styles.remaining}>{game.remainingSpots} yer qalıb</span>
-            ) : (
-              <span className={styles.remainingNone}>Yer qalmayıb</span>
-            )}
+            {/* Free spots mean nothing once a game is over. */}
+            {!past &&
+              (game.remainingSpots > 0 ? (
+                <span className={styles.remaining}>{game.remainingSpots} yer qalıb</span>
+              ) : (
+                <span className={styles.remainingNone}>Yer qalmayıb</span>
+              ))}
           </p>
           <ProgressBar value={game.currentCount} max={game.maxCount} label="Doluluq" />
         </div>
@@ -86,31 +101,77 @@ export function GameCard({
         <div className={styles.footer}>
           <div className={styles.host}>
             <Avatar person={game.host} size={32} decorative />
-            <span className={styles.hostName}>
-              <span className="visually-hidden">Host: </span>
-              {game.host.name}
-            </span>
-          </div>
-          <div className={styles.action}>
-            {game.status === 'open' ? (
-              // Not prefetched: the title link already prefetches this game, and for a signed-out
-              // visitor ?join=1 is a redirect to /login (proxy.ts) that isn't worth fetching ahead.
-              <Link
-                href={`${href}?join=1`}
-                prefetch={false}
-                className={buttonClass('primary', 'sm', { className: styles.join })}
-                aria-label={`${game.title} oyununa qoşul`}
-              >
-                Qoşul
+            {game.host.id ? (
+              // Above the card-wide title link, so it can be clicked on its own.
+              <Link href={`/users/${game.host.id}`} className={`${styles.hostName} ${styles.hostLink}`}>
+                <span className="visually-hidden">Host: </span>
+                {game.host.name}
               </Link>
             ) : (
-              <button type="button" className={buttonClass('muted', 'sm')} disabled>
-                {STATUS_LABELS[game.status]}
-              </button>
+              <span className={styles.hostName}>
+                <span className="visually-hidden">Host: </span>
+                {game.host.name}
+              </span>
             )}
+          </div>
+          <div className={styles.action}>
+            <CardAction game={game} href={href} context={context} />
           </div>
         </div>
       </div>
     </article>
+  )
+}
+
+function CardAction({ game, href, context }: { game: GameCardData; href: string; context: GameCardContext }) {
+  if (context === 'past') {
+    return <span className={buttonClass('muted', 'sm')}>{game.status === 'cancelled' ? 'Ləğv edilib' : 'Keçmiş oyun'}</span>
+  }
+
+  if (context === 'hosting' && EDITABLE.has(game.status)) {
+    return (
+      <Link
+        href={`${href}/edit`}
+        className={buttonClass('outlinePrimary', 'sm', { className: styles.join })}
+        aria-label={`${game.title} oyununu redaktə et`}
+      >
+        Redaktə et
+      </Link>
+    )
+  }
+
+  if (context === 'joined' || context === 'hosting') {
+    return game.status === 'cancelled' ? (
+      <span className={buttonClass('muted', 'sm')}>{STATUS_LABELS.cancelled}</span>
+    ) : (
+      <Link
+        href={href}
+        className={buttonClass('outlinePrimary', 'sm', { className: styles.join })}
+        aria-label={`${game.title} oyununa bax`}
+      >
+        Oyuna bax
+      </Link>
+    )
+  }
+
+  if (game.status === 'open') {
+    // Not prefetched: the title link already prefetches this game, and for a signed-out visitor
+    // ?join=1 is a redirect to /login (proxy.ts) that isn't worth fetching ahead.
+    return (
+      <Link
+        href={`${href}?join=1`}
+        prefetch={false}
+        className={buttonClass('primary', 'sm', { className: styles.join })}
+        aria-label={`${game.title} oyununa qoşul`}
+      >
+        Qoşul
+      </Link>
+    )
+  }
+
+  return (
+    <button type="button" className={buttonClass('muted', 'sm')} disabled>
+      {STATUS_LABELS[game.status]}
+    </button>
   )
 }

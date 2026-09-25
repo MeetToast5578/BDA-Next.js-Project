@@ -84,7 +84,7 @@ Returned by the list, featured and detail endpoints.
     "fullUrl": "/api/media/file/cover-1600x900.webp",
     "fallbackUrl": "/images/game-football-1-7880cc.png"
   },
-  "host": { "name": "Elvin Abbasov", "initials": "EA", "avatarUrl": null }
+  "host": { "id": "4", "name": "Elvin Abbasov", "initials": "EA", "avatarUrl": null }
 }
 ```
 
@@ -92,6 +92,8 @@ Returned by the list, featured and detail endpoints.
 - "6/10 oyunçu" / "4 yer qalıb" are `currentCount/maxCount` and `remainingSpots`.
 - `relativeTimeLabel` is `Bu gün · HH:mm`, `Sabah · HH:mm`, the weekday within the week, or the date beyond it.
 - `coverImage.fallbackUrl` is always the sport's default image, for an `onError` handler.
+- `host.id` is what the host's name links to (`/users/{id}`, see [`GET /api/v1/users/{id}`](#get-apiv1usersid)).
+  It is `null` only for a game whose host account no longer exists.
 
 ## `GET /api/v1/sports`
 
@@ -175,7 +177,7 @@ so games that start soon and are nearly full rank first. Ties go to the earlier 
 ```json
 {
   "…": "game card",
-  "host": { "name": "Elvin Abbasov", "initials": "EA", "avatarUrl": null, "phone": null },
+  "host": { "id": "4", "name": "Elvin Abbasov", "initials": "EA", "avatarUrl": null, "phone": null },
   "participants": { "preview": [{ "name": "…", "initials": "RM", "avatarUrl": null }], "total": 11 },
   "viewer": { "joined": false, "isHost": false }
 }
@@ -323,11 +325,21 @@ also hands the client `role`, `googleId`, `loginAttempts` and `lockUntil`.
 {
   "id": "12", "fullName": "Kərim Məmmədov", "firstName": "Kərim", "initials": "KM",
   "email": "k@example.com", "phoneNumber": "+994502103456",
-  "avatarUrl": "…", "memberSince": "2026-02-11T09:12:00.000Z",
+  "avatarUrl": "…", "memberSince": "2026-02-11T09:12:00.000Z", "memberSinceLabel": "fevral 2026",
   "counts": { "hostingUpcoming": 2, "hostedPast": 7, "joinedUpcoming": 1, "played": 14 },
-  "stats": { "playedBySport": [{ "sport": "football", "label": "Futbol", "iconKey": "football", "playedCount": 9 }] }
+  "stats": {
+    "totalPlayed": 21,
+    "playedBySport": [{ "sport": "football", "label": "Futbol", "iconKey": "football", "playedCount": 9 }]
+  }
 }
 ```
+
+- `hostingUpcoming` / `joinedUpcoming` match the upcoming lists of `GET /api/v1/me/games`.
+- `hostedPast` and `played` are games that are over and were not cancelled: hosted ones, and joined
+  ones the user did not host. A game is counted in exactly one of them.
+- `stats.playedBySport` counts both, per sport, so it adds up to `stats.totalPlayed` =
+  `played + hostedPast`.
+- `memberSinceLabel` is the Baku calendar month the account was created, for "Qeydiyyat: fevral 2026".
 
 ### `PATCH /api/v1/me`
 
@@ -358,7 +370,9 @@ as `profilePictureId`.
 Deletes the account, **and the games it hosts**. That is not optional: `games.host_id` is
 ON DELETE SET NULL and `host` is a required field, so removing the user alone would leave hosted
 games with no host — records nobody can edit or delete, still listed and still carrying a contact
-number. Their participants go too, and so do this user's own participations. One transaction.
+number. Their participants go too, and so do this user's own participations. Each spot the user
+held in someone else's upcoming game is handed back, as if they had left it; past games keep their
+numbers. One transaction.
 
 Returns `{ "ok": true, "deletedGames": 1 }` and clears both session cookies.
 
@@ -381,8 +395,8 @@ stays gated behind joining the game (`GET /api/v1/games/{id}`).
 
 ```json
 {
-  "id": "12", "fullName": "Kərim Məmmədov", "initials": "KM", "avatarUrl": "…",
-  "memberSince": "…", "counts": { "hostingUpcoming": 2, "hostedPast": 7 },
+  "id": "12", "fullName": "Kərim Məmmədov", "firstName": "Kərim", "initials": "KM", "avatarUrl": "…",
+  "memberSince": "…", "memberSinceLabel": "fevral 2026", "counts": { "hostingUpcoming": 2, "hostedPast": 7 },
   "hostedGames": [{ "…": "game card" }]
 }
 ```

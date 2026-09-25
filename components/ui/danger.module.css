@@ -1,0 +1,59 @@
+/*
+ * Destructive actions — deleting a game, deleting an account: a red-tinted panel kept apart from the
+ * form above it, and the confirm dialog it opens.
+ */
+.dangerZone {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 32px;
+  padding: 25px;
+  border: 1px solid color-mix(in srgb, var(--color-danger) 35%, transparent);
+  border-radius: var(--radius-lg);
+  background: var(--color-danger-tint);
+}
+
+.dangerTitle {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-danger);
+}
+
+.dangerText {
+  font-size: 14px;
+  line-height: 21px;
+  color: var(--color-text);
+}
+
+.dangerButton {
+  width: auto;
+  min-width: 180px;
+}
+
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.confirmActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.confirmActions > * {
+  flex: 1 1 140px;
+}
+
+@media (max-width: 600px) {
+  .dangerZone {
+    padding: 18px;
+  }
+
+  .dangerButton {
+    width: 100%;
+  }
+}
