@@ -117,6 +117,18 @@ describe('deriveAvailability', () => {
   it.each(['cancelled', 'finished', 'live'])('keeps the %s status even with spots left', (status) => {
     expect(deriveAvailability(game({ status }), NOW).status).toBe(status)
   })
+
+  it('ends a stored live status with the clock, like any other game', () => {
+    const minutesAgo = (minutes: number) => new Date(NOW - minutes * 60_000).toISOString()
+    const live = (overrides: Record<string, unknown>) => deriveAvailability(game({ status: 'live', ...overrides }), NOW).status
+    expect(live({ sport: 'basketball', scheduledAt: minutesAgo(30) })).toBe('live')
+    // The seed's "live" game, hours later: over, not "Davam edir".
+    expect(live({ sport: 'basketball', scheduledAt: minutesAgo(61) })).toBe('finished')
+    expect(live({ sport: 'football', scheduledAt: inHours(-24) })).toBe('finished')
+    // Set live before its start time: it holds until the sport's usual end after that start.
+    expect(live({ sport: 'football', scheduledAt: inHours(1) })).toBe('live')
+    expect(live({ scheduledAt: undefined })).toBe('live')
+  })
 })
 
 describe('formatBakuLabel', () => {
