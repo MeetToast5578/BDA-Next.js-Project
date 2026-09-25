@@ -126,8 +126,7 @@ export async function findMyGames(userId: number, query: MyGamesQuery, now = new
  * How many games the user hosts and has joined. The upcoming counts match the "Qarşıdakı" lists; the
  * past ones (`hostedPast`, `played`) leave out cancelled games, which nobody played.
  */
-async function countGames(payload: Payload, userId: number, now: Date) {
-  const joinedIds = await participatedGameIds(payload, userId)
+async function countGames(payload: Payload, userId: number, joinedIds: number[], now: Date) {
   const notHostedByMe: Where[] = [{ host: { not_equals: userId } }]
 
   const count = async (where: Where) =>
@@ -145,7 +144,7 @@ async function countGames(payload: Payload, userId: number, now: Date) {
     count(joinedWhere(playedWhere(now))),
   ])
 
-  return { hostingUpcoming, hostedPast, joinedUpcoming, played, joinedIds }
+  return { hostingUpcoming, hostedPast, joinedUpcoming, played }
 }
 
 /**
@@ -187,17 +186,24 @@ async function playedBySport(payload: Payload, userId: number, joinedIds: number
 /** The signed-in user's own profile: identity, counts and stats in one request. */
 export async function getMyProfile(userId: number, now = new Date()) {
   const payload = await getPayloadClient()
-  const user = await payload.findByID({
-    collection: 'users',
-    id: userId,
-    depth: 1,
-    overrideAccess: true,
-    disableErrors: true,
-  })
+  // Two rounds instead of four: the user and their participations need only the id, and the counts
+  // and per-sport stats need only those participations. Each round is a full database latency.
+  const [user, joinedIds] = await Promise.all([
+    payload.findByID({
+      collection: 'users',
+      id: userId,
+      depth: 1,
+      overrideAccess: true,
+      disableErrors: true,
+    }),
+    participatedGameIds(payload, userId),
+  ])
   if (!user) return null
 
-  const counts = await countGames(payload, userId, now)
-  const bySport = await playedBySport(payload, userId, counts.joinedIds, now)
+  const [counts, bySport] = await Promise.all([
+    countGames(payload, userId, joinedIds, now),
+    playedBySport(payload, userId, joinedIds, now),
+  ])
   const fullName = user.fullName?.trim() || user.email
 
   return {
@@ -435,17 +441,16 @@ export async function deleteMyAccount(userId: number) {
  */
 export async function getPublicProfile(userId: number, now = new Date()) {
   const payload = await getPayloadClient()
-  const user = await payload.findByID({
-    collection: 'users',
-    id: userId,
-    select: { fullName: true, profilePicture: true, avatarUrl: true, createdAt: true },
-    depth: 1,
-    overrideAccess: true,
-    disableErrors: true,
-  })
-  if (!user) return null
-
-  const [hosting, hostedPast] = await Promise.all([
+  // All three need only the id, so they go out together rather than the games waiting on the user.
+  const [user, hosting, hostedPast] = await Promise.all([
+    payload.findByID({
+      collection: 'users',
+      id: userId,
+      select: { fullName: true, profilePicture: true, avatarUrl: true, createdAt: true },
+      depth: 1,
+      overrideAccess: true,
+      disableErrors: true,
+    }),
     payload.find({
       collection: 'games',
       where: { and: [{ host: { equals: userId } }, upcomingWhere('upcoming', now)] },
@@ -462,6 +467,7 @@ export async function getPublicProfile(userId: number, now = new Date()) {
       overrideAccess: true,
     }),
   ])
+  if (!user) return null
 
   const fullName = user.fullName?.trim() || 'OyunaGəl istifadəçisi'
   return {
