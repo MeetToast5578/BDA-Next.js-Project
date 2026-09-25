@@ -1,7 +1,9 @@
 import Link from 'next/link'
 
-import type { GameListResponse, SportSummary } from '@/lib/api-types'
+import type { GameListResponse, SportTab } from '@/lib/api-types'
+import type { ProfileWindow } from '@/lib/game-backend'
 import { buttonClass } from '@/components/ui/button'
+import { SegmentedLinks } from '@/components/ui/SegmentedLinks'
 import { EmptyState } from './EmptyState'
 import { GamesGrid } from './GamesGrid'
 import styles from './GamesSection.module.css'
@@ -17,10 +19,25 @@ export function BackHomeLink() {
   )
 }
 
+/** "Qarşıdakı / Keçmiş" between `/games` and `/games/past`, keeping the chosen sport. */
+export function GamesWhenLinks({ when, sport }: { when: ProfileWindow; sport: string | null }) {
+  const query = sport ? `?sport=${sport}` : ''
+  return (
+    <SegmentedLinks
+      label="Oyunların vaxtı"
+      options={[
+        { href: `/games${query}`, label: 'Qarşıdakı', active: when === 'upcoming' },
+        { href: `/games/past${query}`, label: 'Keçmiş', active: when === 'past' },
+      ]}
+    />
+  )
+}
+
 /**
- * Sport tabs, filter summary and the game grid; shared by the homepage and "Bütün oyunlar".
- * With `titleLevel="h1"` it is a page of its own: a "← Ana səhifəyə qayıt" link and the title come
- * before the tabs.
+ * Sport tabs, filter summary and the game grid; shared by the homepage, "Bütün oyunlar" and
+ * "Keçmiş oyunlar". With `titleLevel="h1"` it is a page of its own: a "← Ana səhifəyə qayıt" link and
+ * the title come before the tabs. `when` (on the two list pages only) adds the "Qarşıdakı / Keçmiş"
+ * switch, and `past` turns the whole section into the list of games that already happened.
  */
 export function GamesSection({
   id,
@@ -33,20 +50,23 @@ export function GamesSection({
   list,
   to,
   seeAllHref,
+  when,
 }: {
   id?: string
   eyebrow?: string
   title: string
   titleLevel?: 'h1' | 'h2'
-  sports: SportSummary[]
+  sports: SportTab[]
   sport: string | null
   basePath: string
   list: GameListResponse
   to?: string
   seeAllHref?: string
+  when?: ProfileWindow
 }) {
   const Heading = titleLevel
   const standalone = titleLevel === 'h1'
+  const past = when === 'past'
   const filterLabel = sport ? SPORT_LABELS[sport] : 'Bütün idman növləri'
   const homeLink = <BackHomeLink />
 
@@ -61,6 +81,7 @@ export function GamesSection({
           Aktiv filtr: {filterLabel} • Bakı
         </p>
       </div>
+      {when && <GamesWhenLinks when={when} sport={sport} />}
       {seeAllHref && (
         <Link href={seeAllHref} className={styles.seeAll}>
           Hamısına bax <span aria-hidden="true">→</span>
@@ -68,6 +89,30 @@ export function GamesSection({
       )}
     </div>
   )
+
+  const empty = past
+    ? {
+        title: 'Hələ keçirilmiş oyun yoxdur',
+        text: sport
+          ? 'Bu idman növü üzrə hələ keçirilmiş oyun yoxdur. Qarşıdakı oyunlara baxın və birinə qoşulun.'
+          : 'Oyunlar keçirildikcə burada görünəcək. Qarşıdakı oyunlara baxın və birinə qoşulun.',
+        action: (
+          <Link href={sport ? `/games?sport=${sport}` : '/games'} className={buttonClass('primary', 'md')}>
+            Açıq oyunlara bax
+          </Link>
+        ),
+      }
+    : {
+        title: 'Hələ açıq oyun yoxdur',
+        text: sport
+          ? 'Bu idman növü üçün yaxınlıqda aktiv oyun tapılmadı. İlk oyunu sən yarat, digərləri sənə qoşulsun.'
+          : 'Hazırda aktiv oyun tapılmadı. İlk oyunu sən yarat, digərləri sənə qoşulsun.',
+        action: (
+          <Link href={sport ? `/games/new?sport=${sport}` : '/games/new'} className={buttonClass('primary', 'md')}>
+            Oyun yarat
+          </Link>
+        ),
+      }
 
   return (
     <section id={id} className={`container ${styles.section}`} aria-labelledby={`${id ?? 'games'}-title`}>
@@ -80,7 +125,7 @@ export function GamesSection({
         // Keeps headings in order: on a page whose h1 is this section's title, the tabs need no heading.
         <h2 className="visually-hidden">Nə oynamaq istəyirsən?</h2>
       )}
-      <SportTabs sports={sports} active={sport} basePath={basePath} />
+      <SportTabs sports={sports} active={sport} basePath={basePath} countLabel={past ? 'keçmiş oyun' : 'açıq oyun'} />
 
       <div className={styles.games}>
         {!standalone && head}
@@ -89,17 +134,11 @@ export function GamesSection({
         {list.games.length === 0 ? (
           <EmptyState
             headingLevel={standalone ? 'h2' : 'h3'}
-            title="Hələ açıq oyun yoxdur"
-            text={
-              sport
-                ? 'Bu idman növü üçün yaxınlıqda aktiv oyun tapılmadı. İlk oyunu sən yarat, digərləri sənə qoşulsun.'
-                : 'Hazırda aktiv oyun tapılmadı. İlk oyunu sən yarat, digərləri sənə qoşulsun.'
-            }
+            title={empty.title}
+            text={empty.text}
             action={
               <>
-                <Link href={sport ? `/games/new?sport=${sport}` : '/games/new'} className={buttonClass('primary', 'md')}>
-                  Oyun yarat
-                </Link>
+                {empty.action}
                 {/* On the homepage itself a link back home would go nowhere. */}
                 {standalone && homeLink}
               </>
@@ -107,10 +146,11 @@ export function GamesSection({
           />
         ) : (
           <GamesGrid
-            key={sport ?? 'all'}
+            key={`${when ?? 'upcoming'}-${sport ?? 'all'}`}
             initial={list}
-            query={{ sport, to }}
+            query={{ sport, to, when: past ? 'past' : undefined }}
             cardHeadingLevel={standalone ? 'h2' : 'h3'}
+            cardContext={past ? 'past' : 'browse'}
           />
         )}
       </div>

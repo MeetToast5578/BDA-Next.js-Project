@@ -5,6 +5,8 @@ import { GAMES_CACHE_TAG, invalidateGamesCache } from '@/lib/cache-tags'
 import {
   DEFAULT_CITY,
   FEATURED_WINDOW_HOURS,
+  SPORT_META,
+  SPORTS,
   countOpenGamesBySport,
   deriveAvailability,
   foldForSearch,
@@ -176,10 +178,12 @@ async function findGameDocs(
 }
 
 export async function findGames(query: GameListQuery, now = new Date()) {
+  if (query.when === 'past') return findPastGames(query, now)
+
   // `query.from` is "now", which would make every request a unique cache key. Bucketing it keeps the
   // key stable for a minute; availability is still re-derived per request below, and the games that
   // started inside the bucket are dropped so the list matches an unbucketed read exactly.
-  const fromIso = new Date(Math.floor(query.from.getTime() / LIST_BUCKET_MS) * LIST_BUCKET_MS).toISOString()
+  const fromIso = bucketed(query.from)
   const result = await findGameDocs(
     query.sport,
     query.city,
@@ -204,6 +208,101 @@ export async function findGames(query: GameListQuery, now = new Date()) {
       hasNextPage: result.hasNextPage,
     },
   }
+}
+
+/** Games that have started, not cancelled, most recent first. Cached like the upcoming list. */
+async function findPastGameDocs(sport: string | null, city: string, beforeIso: string, page: number, limit: number) {
+  'use cache'
+  cacheLife(CACHE_PROFILE)
+  cacheTag(GAMES_CACHE_TAG)
+
+  const payload = await getPayloadClient()
+  const result = await payload.find({
+    collection: 'games',
+    where: {
+      and: [
+        { status: { not_equals: 'cancelled' } },
+        { scheduledAt: { less_than_equal: beforeIso } },
+        cityWhere('arena.city', city),
+        ...(sport ? [{ sport: { equals: sport } }] : []),
+      ],
+    },
+    select: CARD_SELECT,
+    populate: CARD_POPULATE,
+    sort: '-scheduledAt',
+    page,
+    limit,
+    depth: 2,
+    overrideAccess: true,
+  })
+  return {
+    docs: result.docs,
+    page: result.page ?? page,
+    totalDocs: result.totalDocs,
+    totalPages: result.totalPages,
+    hasNextPage: result.hasNextPage,
+  }
+}
+
+/** Rounds "now" down to the list bucket, so requests in the same minute share a cache entry. */
+function bucketed(now: Date) {
+  return new Date(Math.floor(now.getTime() / LIST_BUCKET_MS) * LIST_BUCKET_MS).toISOString()
+}
+
+/**
+ * "Keçmiş oyunlar": games that have already started, the most recent first. Cancelled games are
+ * left out: this is the list of games that happened (a player's own history still shows them).
+ */
+async function findPastGames(query: GameListQuery, now: Date) {
+  // A game that started inside the current minute joins the list with the next bucket.
+  const result = await findPastGameDocs(query.sport, query.city, bucketed(now), query.page, query.limit)
+  return {
+    games: result.docs.map((doc) => toGameCard(normalizeGameRecord(doc, now.getTime()))),
+    pagination: {
+      page: result.page,
+      limit: query.limit,
+      totalDocs: result.totalDocs,
+      totalPages: result.totalPages,
+      hasNextPage: result.hasNextPage,
+    },
+  }
+}
+
+async function countPastGames(city: string, beforeIso: string) {
+  'use cache'
+  cacheLife(CACHE_PROFILE)
+  cacheTag(GAMES_CACHE_TAG)
+
+  const payload = await getPayloadClient()
+  const counts = await Promise.all(
+    SPORTS.map(async (sport) => {
+      const { totalDocs } = await payload.count({
+        collection: 'games',
+        where: {
+          and: [
+            { sport: { equals: sport } },
+            { status: { not_equals: 'cancelled' } },
+            { scheduledAt: { less_than_equal: beforeIso } },
+            cityWhere('arena.city', city),
+          ],
+        },
+        overrideAccess: true,
+      })
+      return [sport, totalDocs] as const
+    }),
+  )
+  return Object.fromEntries(counts) as Record<string, number>
+}
+
+/** Past games per sport, for the tabs above "Keçmiş oyunlar"; every sport listed, like the open counts. */
+export async function getPastGamesCountBySport(city: string, now = new Date()) {
+  const counts = await countPastGames(city, bucketed(now))
+  return SPORTS.map((sport) => ({
+    sport,
+    label: SPORT_META[sport].label,
+    iconKey: SPORT_META[sport].iconKey,
+    count: counts[sport] ?? 0,
+  }))
 }
 
 async function findFeaturedCandidates(city: string) {

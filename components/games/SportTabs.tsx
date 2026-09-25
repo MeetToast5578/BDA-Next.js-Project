@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useOptimistic, useTransition } from 'react'
 
-import type { SportSummary } from '@/lib/api-types'
+import type { SportTab } from '@/lib/api-types'
 import { sortSports, SPORT_EMOJI } from './sports'
 import styles from './SportTabs.module.css'
 
@@ -20,10 +20,13 @@ export function SportTabs({
   sports,
   active,
   basePath,
+  countLabel = 'açıq oyun',
 }: {
-  sports: SportSummary[]
+  sports: SportTab[]
   active: string | null
   basePath: string
+  /** What each tab's count is of: "açıq oyun" above the open games, "keçmiş oyun" above past ones. */
+  countLabel?: string
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -61,7 +64,9 @@ export function SportTabs({
                   {SPORT_EMOJI[sport.iconKey] ?? '🏅'}
                 </span>
                 <span className={styles.label}>{sport.label}</span>
-                <span className={styles.count}>{sport.openGamesCount} açıq oyun</span>
+                <span className={styles.count}>
+                  {sport.count} {countLabel}
+                </span>
                 {pending && isActive && <span className={styles.spinner} aria-hidden="true" />}
               </Link>
             </li>

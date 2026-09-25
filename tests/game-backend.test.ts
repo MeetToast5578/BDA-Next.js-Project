@@ -412,6 +412,7 @@ describe('parseGameListParams', () => {
     expect(parse('')).toEqual({
       ok: true,
       query: {
+        when: 'upcoming',
         sport: null,
         city: 'baku',
         from: new Date(NOW),
@@ -433,6 +434,14 @@ describe('parseGameListParams', () => {
     expect(parse('city=Paris')).toMatchObject({ ok: false, code: 'UNKNOWN_CITY' })
     expect(parse('to=tomorrow')).toMatchObject({ ok: false, code: 'INVALID_DATE' })
     expect(parse('status=full')).toMatchObject({ ok: false, code: 'INVALID_STATUS' })
+    expect(parse('when=later')).toMatchObject({ ok: false, code: 'INVALID_WINDOW' })
+  })
+
+  it('switches to the games that already happened with when=past', () => {
+    expect(parse('when=past&sport=football&page=2')).toMatchObject({
+      ok: true,
+      query: { when: 'past', sport: 'football', page: 2, limit: 12 },
+    })
   })
 })
 

@@ -502,6 +502,8 @@ export function rankFeatured<T extends Rankable>(games: T[], now: number, limit 
 type ParseOk<T> = { ok: true; value: T } | { ok: false; code: string; message: string }
 
 export type GameListQuery = {
+  /** `upcoming`: from `from` to `to`, soonest first. `past`: games that have started, most recent first. */
+  when: ProfileWindow
   sport: string | null
   city: string
   from: Date
@@ -530,9 +532,15 @@ export function parseGameListParams(params: URLSearchParams, now = new Date()): 
   const status = params.get('status')
   if (status && status !== 'open') return { ok: false, code: 'INVALID_STATUS', message: 'status only accepts "open".' }
 
+  const when = params.get('when') ?? 'upcoming'
+  if (!PROFILE_WINDOWS.includes(when as ProfileWindow)) {
+    return { ok: false, code: 'INVALID_WINDOW', message: `when must be one of: ${PROFILE_WINDOWS.join(', ')}` }
+  }
+
   return {
     ok: true,
     query: {
+      when: when as ProfileWindow,
       sport,
       city,
       // Games that already started can't be joined, so the window never reaches into the past.

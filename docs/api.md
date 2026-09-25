@@ -17,6 +17,7 @@ Errors always have the shape:
 | Hero carousel                           | `GET /api/v1/games/featured`                         |
 | Sport tabs ("Futbol · 18 açıq oyun")    | `GET /api/v1/sports`                                 |
 | "Açıq oyunlar" grid, "Daha çox"         | `GET /api/v1/games?page=N`                           |
+| "Keçmiş oyunlar" (`/games/past`)        | `GET /api/v1/games?when=past&page=N`                 |
 | Empty state ("Hələ açıq oyun yoxdur")   | `GET /api/v1/games?sport=…` returning `games: []`    |
 | Oyun Detalı                             | `GET /api/v1/games/{id}`                             |
 | Qoşulma modalı, addım 1 → addım 2       | Client-side only; nothing is sent yet                |
@@ -120,7 +121,10 @@ Only `open` games count. The query is cached (Next data cache, tag `games`, refr
 
 ## `GET /api/v1/games`
 
-The "bu gün / sabah" grid and the "Hamısına bax" list, soonest first.
+The "bu gün / sabah" grid and the "Hamısına bax" list, soonest first. With `when=past`, "Keçmiş
+oyunlar" instead: games that have already started, most recent first, whatever their `from`/`to`.
+Cancelled games are left out of it (it lists games that happened; a player's own history under
+`GET /api/v1/me/games?when=past` still shows them).
 
 | Query    | Default                    | Notes                                                        |
 | -------- | -------------------------- | ------------------------------------------------------------ |
@@ -131,6 +135,7 @@ The "bu gün / sabah" grid and the "Hamısına bax" list, soonest first.
 | `status` | open and full              | `open` → only games with spots left                          |
 | `page`   | `1`                        | 1-based                                                      |
 | `limit`  | `12`                       | 1–50                                                         |
+| `when`   | `upcoming`                 | `upcoming` or `past`. Else `400 INVALID_WINDOW`              |
 
 ```json
 {
