@@ -20,6 +20,7 @@ Errors always have the shape:
 | "Keçmiş oyunlar" (`/games/past`)        | `GET /api/v1/games?when=past&page=N`                 |
 | Empty state ("Hələ açıq oyun yoxdur")   | `GET /api/v1/games?sport=…` returning `games: []`    |
 | Oyun Detalı                             | `GET /api/v1/games/{id}`                             |
+| İştirakçılar (the avatar row's list)    | `GET /api/v1/games/{id}/participants`                |
 | Qoşulma modalı, addım 1 → addım 2       | Client-side only; nothing is sent yet                |
 | "Bir addım qaldı" → "Qoşulmanı təsdiq et" | `POST /api/v1/games/{id}/join` (returns host phone) |
 | Yeni Oyun Yarat: Meydança picker        | `GET /api/v1/venues?sport=…&q=…`                     |
@@ -169,7 +170,7 @@ so games that start soon and are nearly full rank first. Ties go to the earlier 
     {
       "…": "game card",
       "participants": {
-        "preview": [{ "name": "Elvin Abbasov", "initials": "EA", "avatarUrl": "/api/media/file/elvin.png" }],
+        "preview": [{ "id": "7", "name": "Elvin Abbasov", "initials": "EA", "avatarUrl": "/api/media/file/elvin.png" }],
         "total": 11
       }
     }
@@ -178,7 +179,7 @@ so games that start soon and are nearly full rank first. Ties go to the earlier 
 }
 ```
 
-`preview` holds up to the first 5 players who joined through the join endpoint, oldest first. Show `avatarUrl` when set, else `initials`. The "+N" bubble is `total − preview.length`.
+`preview` holds up to the first 5 players who joined through the join endpoint, oldest first. Show `avatarUrl` when set, else `initials`. The "+N" bubble is `total − preview.length`. Each player is named after their account (the name typed into the join form only stands in once the account is gone, when `id` is `null`). The whole avatar row opens the full list, [`GET /api/v1/games/{id}/participants`](#get-apiv1gamesidparticipants).
 
 ## `GET /api/v1/games/{id}`
 
@@ -188,12 +189,38 @@ so games that start soon and are nearly full rank first. Ties go to the earlier 
 {
   "…": "game card",
   "host": { "id": "4", "name": "Elvin Abbasov", "initials": "EA", "avatarUrl": null, "phone": null },
-  "participants": { "preview": [{ "name": "…", "initials": "RM", "avatarUrl": null }], "total": 11 },
+  "participants": { "preview": [{ "id": "9", "name": "…", "initials": "RM", "avatarUrl": null }], "total": 11 },
   "viewer": { "joined": false, "isHost": false }
 }
 ```
 
 `host.phone` is `null` until the viewer has joined (or is the host), matching "Əlaqə oyuna qoşulduqdan sonra görünür". The button reads "Qoşul - {remainingSpots} yer qalıb" while `status` is `open`. `404 GAME_NOT_FOUND` for unknown IDs.
+
+## `GET /api/v1/games/{id}/participants`
+
+"İştirakçılar": the list the avatar row opens, on the game page and the home carousel. Public, like
+the game itself; signing in only marks your own row. Read fresh on every request, so it shows a join
+from a second ago.
+
+```json
+{
+  "game": { "id": "12", "title": "Cümə axşamı 5-ə-5", "currentCount": 11, "maxCount": 12 },
+  "host": { "id": "4", "name": "Elvin Abbasov", "initials": "EA", "avatarUrl": null, "you": false },
+  "players": [
+    { "id": "7", "name": "Aysel Quliyeva", "initials": "AQ", "avatarUrl": "/api/media/file/aysel.png", "you": true },
+    { "id": null, "name": "Rəşad Babayev", "initials": "RB", "avatarUrl": null, "you": false }
+  ],
+  "others": 2
+}
+```
+
+- The host comes first, then the players in the order they joined. Each row links to
+  `/users/{id}`, and the viewer's own (`you`) to `/profile`.
+- Names are the accounts' names, like the avatar row. `id` is `null` for a player whose account is
+  gone: that row shows the name typed into the join form and links nowhere.
+- `others` is the rest of `currentCount`: players the host said were already coming when they
+  created the game, who have no account to list ("+2 nəfər hostla birlikdə gəlir").
+- No phone numbers. `404 GAME_NOT_FOUND`, `400 INVALID_GAME_ID`.
 
 ## `PATCH /api/v1/games/{id}`
 

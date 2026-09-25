@@ -58,6 +58,9 @@ const AVATAR_TONES = [
   { bg: '#b4443c', fg: '#fff' },
 ]
 
+/** All an avatar needs: players, hosts and the signed-in user all have these. */
+type AvatarPerson = Pick<Participant, 'name' | 'initials' | 'avatarUrl'>
+
 export function Avatar({
   person,
   size,
@@ -65,7 +68,7 @@ export function Avatar({
   decorative = false,
   className,
 }: {
-  person: Participant
+  person: AvatarPerson
   size: number
   /** Picks an initials background from the palette; omit for the brand color. */
   toneIndex?: number
@@ -100,6 +103,12 @@ export function Avatar({
   )
 }
 
+/**
+ * The first players' avatars and a "+N" for the rest. Only a picture: it is drawn inside the
+ * players button (`PlayersButton`), which names it and opens the full list, so the avatars are not
+ * separate targets and are hidden from screen readers. `--spread` (set by that button on hover) fans
+ * them out a little.
+ */
 export function AvatarStack({
   people,
   total,
@@ -107,7 +116,6 @@ export function AvatarStack({
   overlap,
   ring = 2,
   moreStyle,
-  label,
 }: {
   people: Participant[]
   total: number
@@ -116,24 +124,23 @@ export function AvatarStack({
   ring?: number
   /** Colors of the "+N" bubble. */
   moreStyle?: { bg: string; color: string }
-  label: string
 }) {
   const extra = Math.max(0, total - people.length)
   if (people.length === 0 && extra === 0) return null
 
   return (
-    <ul
+    <span
       className={styles.stack}
-      aria-label={label}
+      aria-hidden="true"
       style={{ '--overlap': `${overlap}px`, '--ring': `${ring}px` } as CSSProperties}
     >
       {people.map((person, index) => (
-        <li key={`${person.name}-${index}`}>
-          <Avatar person={person} size={size} toneIndex={index} />
-        </li>
+        <span key={`${person.id ?? person.name}-${index}`} className={styles.stackItem}>
+          <Avatar person={person} size={size} toneIndex={index} decorative />
+        </span>
       ))}
       {extra > 0 && (
-        <li>
+        <span className={styles.stackItem}>
           <span
             className={`${styles.avatar} ${styles.more}`}
             style={
@@ -146,11 +153,10 @@ export function AvatarStack({
               } as CSSProperties
             }
           >
-            <span aria-hidden="true">+{extra}</span>
-            <span className="visually-hidden">və daha {extra} oyunçu</span>
+            +{extra}
           </span>
-        </li>
+        </span>
       )}
-    </ul>
+    </span>
   )
 }

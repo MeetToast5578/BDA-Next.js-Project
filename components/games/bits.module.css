@@ -100,17 +100,15 @@
 .stack {
   display: flex;
   align-items: center;
-  padding: 0;
-  margin: 0;
-  list-style: none;
 }
 
-.stack > li {
+.stackItem {
   display: flex;
 }
 
-.stack > li + li {
-  margin-left: calc(var(--overlap) * -1);
+.stackItem + .stackItem {
+  margin-left: calc((var(--overlap) - var(--spread, 0px)) * -1);
+  transition: margin-left 0.25s var(--ease-out);
 }
 
 .stack .avatar {

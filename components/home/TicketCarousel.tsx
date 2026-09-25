@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 
 import type { FeaturedGame } from '@/lib/api-types'
-import { AvatarStack, ProgressBar, SportBadge } from '@/components/games/bits'
+import { ProgressBar, SportBadge } from '@/components/games/bits'
+import { PlayersButton } from '@/components/games/PlayersButton'
 import { buttonClass } from '@/components/ui/button'
 import { Icon } from '@/components/ui/Icon'
 import styles from './TicketCarousel.module.css'
@@ -256,13 +257,16 @@ const Ticket = memo(function Ticket({ game, clone }: { game: FeaturedGame; clone
         </div>
 
         <div className={styles.ticketFooter}>
-          <AvatarStack
+          <PlayersButton
+            gameId={game.id}
+            gameTitle={game.title}
             people={game.participants.preview}
             total={game.participants.total}
             size={36}
             overlap={8}
             moreStyle={{ bg: '#cee9d9', color: '#082016' }}
-            label="İştirakçılar"
+            className={styles.players}
+            tabIndex={tabIndex}
           />
           {/* Not prefetched, like the "Qoşul" on game cards: the title link already covers this game. */}
           <Link
