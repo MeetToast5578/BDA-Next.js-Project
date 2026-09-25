@@ -1,4 +1,4 @@
-# BDA
+# BDA_Oyuna_Gel
 
 A [Next.js](https://nextjs.org) app with [Payload CMS](https://payloadcms.com) as the backend, backed by Postgres.
 
