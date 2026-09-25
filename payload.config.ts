@@ -53,7 +53,12 @@ export default buildConfig({
     // write in the admin panel. Schema changes go through migrations instead.
     push: false,
     pool: {
-      connectionString: process.env.DATABASE_URL || "",
+      // pg already reads sslmode=require (what Neon and Vercel hand out) as verify-full, and warns on
+      // every connect that pg v9 will weaken it. Spelling out verify-full keeps today's check, quietly.
+      connectionString: (process.env.DATABASE_URL || "").replace(
+        /\bsslmode=(prefer|require|verify-ca)\b/,
+        "sslmode=verify-full",
+      ),
     },
   }),
   sharp,
