@@ -222,6 +222,8 @@ Join attempts are kept: `join_attempts.gameId` is a plain number, so the audit l
 
 Body: `{ "name": "Kərim Məmmədov", "phone": "+994 50 210 34 56" }` — what step 1 of the join modal collected. Both are re-validated server-side; either one left out falls back to the profile's value, and a `400` follows if the profile has none.
 
+A `phone` sent is kept on the profile (see [Remembered phone number](#remembered-phone-number)) when the profile has none, or when `"saveToProfile": true` asks to replace it.
+
 **200** also returns the full game detail, now with `host.phone`:
 
 ```json
@@ -231,7 +233,8 @@ Body: `{ "name": "Kərim Məmmədov", "phone": "+994 50 210 34 56" }` — what s
   "remainingSpots": 0,
   "currentCount": 12,
   "maxCount": 12,
-  "game": { "…": "as GET /api/v1/games/{id}", "host": { "name": "Elvin Abbasov", "phone": "+994502103456" } }
+  "game": { "…": "as GET /api/v1/games/{id}", "host": { "name": "Elvin Abbasov", "phone": "+994502103456" } },
+  "savedToProfile": false
 }
 ```
 
@@ -292,10 +295,22 @@ Options for the "Meydança" picker.
 | `maxCount`      | Even (two equal sides), from 2 up to the sport's full size: football 22, basketball 10, tennis 4 |
 | `hostPhone`     | Optional if the profile has a phone number; shown to players after they join |
 | `title`         | Optional, defaults to "Futbol oyunu" etc. (the design has no title field)  |
+| `saveToProfile` | Optional `true`: also replace the profile's number with `hostPhone` (see [Remembered phone number](#remembered-phone-number)) |
 
 The host name ("Ad Soyad (Host)") comes from the account, so show it read-only.
 
-**201** `{ "game": { …as GET /api/v1/games/{id} } }`. Errors: `401 UNAUTHENTICATED`; `400` with `INVALID_SPORT`, `INVALID_LEVEL`, `INVALID_VENUE`, `INVALID_DATE`, `DATE_IN_PAST`, `INVALID_MAX_COUNT`, `INVALID_CURRENT_COUNT`, `INVALID_PHONE`, `VENUE_NOT_FOUND`, `VENUE_SPORT_MISMATCH`, `PHONE_REQUIRED`.
+**201** `{ "game": { …as GET /api/v1/games/{id} }, "savedToProfile": true }`. Errors: `401 UNAUTHENTICATED`; `400` with `INVALID_SPORT`, `INVALID_LEVEL`, `INVALID_VENUE`, `INVALID_DATE`, `DATE_IN_PAST`, `INVALID_MAX_COUNT`, `INVALID_CURRENT_COUNT`, `INVALID_PHONE`, `VENUE_NOT_FOUND`, `VENUE_SPORT_MISMATCH`, `PHONE_REQUIRED`.
+
+### Remembered phone number
+
+The create form and the join modal start from the profile's number, so the number someone types is
+kept there for next time: after a successful create or join, the `hostPhone` / `phone` sent becomes
+the profile's number **when the profile has none**. A different number already on the profile is
+only replaced when the body carries `"saveToProfile": true` (the forms' "Bu nömrəni profilimdə
+saxla" checkbox). A number another account holds is never taken — numbers are unique per account —
+and a failure here never fails the create or join. `savedToProfile` in the response says whether the
+profile changed; the client then calls the `expireSession` Server Action so the header and the next
+form don't keep showing the session it had cached.
 
 ## `POST /api/v1/games/{id}/leave`
 

@@ -27,13 +27,16 @@ import {
   SPORT_META,
 } from '@/lib/game-backend'
 import { formatLocalPhone, PHONE_ERROR, PHONE_PREFIX } from '@/lib/phone'
+import { phoneSource, type PhoneSource } from '@/lib/profile-form'
 import { loginHref } from '@/lib/safe-redirect'
+import { expireSession } from '@/lib/session-actions'
 import { LEVEL_OPTIONS, SPORT_EMOJI, SPORT_LABELS, SPORT_ORDER } from '@/components/games/sports'
 import { buttonClass } from '@/components/ui/button'
 import form from '@/components/ui/form.module.css'
 import { Icon } from '@/components/ui/Icon'
 import { Modal } from '@/components/ui/Modal'
 import { PhoneInput } from '@/components/ui/PhoneInput'
+import { PhoneProfileNote } from '@/components/ui/PhoneProfileNote'
 import danger from '@/components/ui/danger.module.css'
 import styles from './GameForm.module.css'
 import { VenuePicker } from './VenuePicker'
@@ -185,6 +188,9 @@ export function GameForm({
   const minMaxCount = editing ? minMaxFor(currentCount) : MIN_MAX_PLAYERS
   // Only the digits after the fixed +994 prefix, formatted as "77 538 60 04".
   const [hostPhone, setHostPhone] = useState(formatLocalPhone(game?.host.phone ?? user.phoneNumber ?? ''))
+  // Creating remembers the number on the profile (see PhoneProfileNote); editing a game's number doesn't.
+  const phoneNote: PhoneSource = editing ? 'none' : phoneSource(user.phoneNumber, hostPhone)
+  const [savePhone, setSavePhone] = useState(false)
   const [title, setTitle] = useState(game?.title ?? '')
 
   const [errors, setErrors] = useState<Errors>({})
@@ -286,13 +292,16 @@ export function GameForm({
       maxCount,
       hostPhone: `${PHONE_PREFIX} ${hostPhone}`,
       ...(title.trim() ? { title: title.trim() } : {}),
+      ...(phoneNote === 'differs' && savePhone ? { saveToProfile: true } : {}),
     }
 
     setPending(true)
     try {
       const saved = editing
-        ? await patchJson<{ game: GameDetail }>(`/api/v1/games/${game.id}`, body)
-        : await postJson<{ game: GameDetail }>('/api/v1/games', body)
+        ? await patchJson<{ game: GameDetail; savedToProfile?: boolean }>(`/api/v1/games/${game.id}`, body)
+        : await postJson<{ game: GameDetail; savedToProfile?: boolean }>('/api/v1/games', body)
+      // The number is the profile's now: the header and the next form must not keep the old one.
+      if (saved.savedToProfile) await expireSession()
       router.push(`/games/${saved.game.id}`)
       router.refresh()
     } catch (err) {
@@ -368,7 +377,15 @@ export function GameForm({
                 }}
                 required
                 invalid={invalid('hostPhone')}
-                describedBy={describe('hostPhone', ids.phone)}
+                describedBy={[phoneNote === 'none' ? '' : `${ids.phone}-note`, describe('hostPhone', ids.phone)]
+                  .filter(Boolean)
+                  .join(' ')}
+              />
+              <PhoneProfileNote
+                id={`${ids.phone}-note`}
+                source={phoneNote}
+                save={savePhone}
+                onSaveChange={setSavePhone}
               />
               {fieldError('hostPhone', ids.phone)}
             </div>

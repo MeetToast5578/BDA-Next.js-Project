@@ -25,6 +25,8 @@ export type CreateGameRequest = {
   maxCount: number
   hostPhone?: string
   title?: string
+  /** Replace the profile's number with `hostPhone` ("Bu nömrəni profilimdə saxla"). */
+  saveToProfile?: boolean
 }
 
 export type MyProfile = NonNullable<Awaited<ReturnType<typeof getMyProfile>>>

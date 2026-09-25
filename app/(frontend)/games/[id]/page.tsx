@@ -186,7 +186,8 @@ async function GameDetailContent({ params, searchParams }: Props) {
           </Link>
         )}
 
-        <JoinPanel game={game} user={user} autoOpen={wantsToJoin && canJoin} />
+        {/* Keyed like the create form: a page kept mounted since a profile change prefills the new number. */}
+        <JoinPanel key={user?.phoneNumber ?? 'no-phone'} game={game} user={user} autoOpen={wantsToJoin && canJoin} />
       </aside>
     </div>
   )

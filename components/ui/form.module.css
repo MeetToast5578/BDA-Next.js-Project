@@ -134,3 +134,34 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.hintLink {
+  border-radius: 4px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.hintLink:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* A checkbox with its label beside it, e.g. "Bu nömrəni profilimdə saxla". */
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.check input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}

@@ -232,6 +232,46 @@ export type MyProfile = NonNullable<Awaited<ReturnType<typeof getMyProfile>>>
 
 type UpdateResult = { ok: true; profile: MyProfile } | { ok: false; code: string; message: string }
 
+/** Phone numbers are unique across accounts (`users.phone_number`). */
+async function phoneTakenByOther(payload: Payload, phone: string, userId: number) {
+  const { totalDocs } = await payload.count({
+    collection: 'users',
+    where: { and: [{ phoneNumber: { equals: phone } }, { id: { not_equals: userId } }] },
+    overrideAccess: true,
+  })
+  return totalDocs > 0
+}
+
+/**
+ * Keeps the number someone just used to create or join a game on their profile, so the next form
+ * starts with it. It fills an empty profile number; a different one already there is only replaced
+ * when they asked (`overwrite`, the forms' "Bu nömrəni profilimdə saxla"). A number another account
+ * holds is left alone. Best effort: says whether it saved, and never fails the game action it follows.
+ */
+export async function rememberPhone(userId: number, phone: string, { overwrite = false } = {}) {
+  try {
+    const payload = await getPayloadClient()
+    const user = await payload.findByID({
+      collection: 'users',
+      id: userId,
+      select: { phoneNumber: true },
+      depth: 0,
+      overrideAccess: true,
+      disableErrors: true,
+    })
+    if (!user || user.phoneNumber === phone) return false
+    if (user.phoneNumber && !overwrite) return false
+    if (await phoneTakenByOther(payload, phone, userId)) return false
+
+    await payload.update({ collection: 'users', id: userId, data: { phoneNumber: phone }, overrideAccess: true })
+    return true
+  } catch (error) {
+    // A race for the same number ends at the unique index; the game action has already succeeded.
+    console.error('Failed to remember phone number', error)
+    return false
+  }
+}
+
 /** The id behind a relationship value, populated or not. */
 function relationId(value: unknown) {
   const id = value && typeof value === 'object' ? (value as { id?: unknown }).id : value
@@ -282,18 +322,8 @@ export async function updateMyProfile(userId: number, update: ProfileUpdate): Pr
     }
   }
 
-  if (update.phone) {
-    const clash = await payload.find({
-      collection: 'users',
-      where: { and: [{ phoneNumber: { equals: update.phone } }, { id: { not_equals: userId } }] },
-      select: { phoneNumber: true },
-      limit: 1,
-      depth: 0,
-      overrideAccess: true,
-    })
-    if (clash.totalDocs > 0) {
-      return { ok: false, code: 'PHONE_TAKEN', message: 'Bu nömrə başqa hesabda istifadə olunur.' }
-    }
+  if (update.phone && (await phoneTakenByOther(payload, update.phone, userId))) {
+    return { ok: false, code: 'PHONE_TAKEN', message: 'Bu nömrə başqa hesabda istifadə olunur.' }
   }
 
   await payload.update({

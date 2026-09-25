@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { cacheTag } from 'next/cache'
 import { headers } from 'next/headers'
 import { cache } from 'react'
 
@@ -14,6 +15,10 @@ import { getPayloadClient } from '@/lib/game-queries'
  * `use cache: private` is what lets a session read be prefetched: the result is held in the
  * browser only, never on the server, so one signed-in user's identity can never be served to
  * another. It is also the only cache scope allowed to read `headers()`.
+ *
+ * Held for a few minutes, so a change to the profile (name, picture, phone) must expire it:
+ * `expireSession()` in lib/session-actions.ts, called after every such change. Without it the header
+ * and the phone prefills of the create and join forms keep showing the old values.
  */
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   'use cache: private'
@@ -21,6 +26,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const payload = await getPayloadClient()
   const { user } = await payload.auth({ headers: await headers() })
   if (!user || user.collection !== 'users') return null
+  cacheTag(sessionTag(Number(user.id)))
 
   const fullName = user.fullName?.trim() || user.email
   return {
@@ -36,4 +42,9 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
 
 export function isGoogleAuthConfigured() {
   return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
+}
+
+/** Tag on one user's cached session; `expireSession()` expires it. An id, never anything personal. */
+export function sessionTag(userId: number) {
+  return `session-${userId}`
 }

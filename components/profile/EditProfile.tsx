@@ -14,6 +14,7 @@ import {
   type ProfileFormErrors,
 } from '@/lib/profile-form'
 import { loginHref } from '@/lib/safe-redirect'
+import { expireSession } from '@/lib/session-actions'
 import { IMAGE_MIME_TYPES, MAX_UPLOAD_BYTES } from '@/lib/uploads'
 import { Avatar } from '@/components/games/bits'
 import join from '@/components/games/JoinPanel.module.css'
@@ -176,8 +177,9 @@ export function EditProfile({ profile, children }: { profile: Saved; children: R
       setPicture({ kind: 'saved' })
       setOpen(false)
       setStatus('Profil yeniləndi.')
-      // Re-reads the page, and with it the header chip, which shows the name and photo too.
-      startRefresh(() => router.refresh())
+      // Expires the cached session, whose answer re-renders this page, header chip included, and
+      // keeps other pages (the create form's phone, for one) from showing the old profile.
+      startRefresh(() => expireSession())
     } catch (err) {
       const apiError = err instanceof ApiError ? err : null
       if (apiError?.code === 'UNAUTHENTICATED') {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { NAME_ERROR, profilePatch, validateProfileDraft } from '@/lib/profile-form'
+import { NAME_ERROR, phoneSource, profilePatch, validateProfileDraft } from '@/lib/profile-form'
 import { PHONE_ERROR } from '@/lib/phone'
 
 const saved = { fullName: 'Kərim Məmmədov', phoneNumber: '+994502103456' }
@@ -41,5 +41,27 @@ describe('profilePatch', () => {
     const noPhone = { ...saved, phoneNumber: null }
     expect(profilePatch(noPhone, { fullName: saved.fullName, phone: '77 538 60 04' })).toEqual({ phone: '+994775386004' })
     expect(profilePatch(noPhone, { fullName: saved.fullName, phone: '' })).toEqual({})
+  })
+})
+
+describe('phoneSource', () => {
+  const profilePhone = '+994502103456'
+
+  it('says the number came from the profile', () => {
+    expect(phoneSource(profilePhone, '50 210 34 56')).toBe('profile')
+  })
+
+  it('says a number will be kept when the profile has none, typed or not', () => {
+    expect(phoneSource(null, '')).toBe('will-save')
+    expect(phoneSource(null, '77 538 60 04')).toBe('will-save')
+  })
+
+  it('offers to keep a different, complete number', () => {
+    expect(phoneSource(profilePhone, '77 538 60 04')).toBe('differs')
+  })
+
+  it('says nothing while a number is still being typed', () => {
+    expect(phoneSource(profilePhone, '77 538')).toBe('none')
+    expect(phoneSource(profilePhone, '')).toBe('none')
   })
 })
