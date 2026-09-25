@@ -6,6 +6,7 @@ import { useOptimistic, useTransition } from 'react'
 
 import { profileTabsQuery, type ProfileRole, type ProfileWindow } from '@/lib/game-backend'
 import tabs from '@/components/games/SportTabs.module.css'
+import segmented from '@/components/ui/segmented.module.css'
 import styles from './Profile.module.css'
 
 type Tab = { role: ProfileRole; when: ProfileWindow }
@@ -88,7 +89,7 @@ export function ProfileTabs({
           )
         })}
       </ul>
-      <ul className={styles.segments}>
+      <ul className={segmented.segments}>
         {WINDOWS.map((option) => {
           const active = shown.when === option.value
           return (
@@ -96,7 +97,7 @@ export function ProfileTabs({
               {link(
                 { role: shown.role, when: option.value },
                 active,
-                `${styles.segment} ${active ? styles.segmentActive : ''}`,
+                `${segmented.segment} ${active ? segmented.segmentActive : ''}`,
                 option.label,
               )}
             </li>

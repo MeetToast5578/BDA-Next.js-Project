@@ -40,5 +40,15 @@ async function CreateGameForm({ searchParams }: { searchParams: SearchParams }) 
   // proxy.ts already sends visitors without a session cookie to /login; this catches an expired one.
   if (!user) redirect(loginHref(sport ? `/games/new?sport=${sport}` : '/games/new'))
 
-  return <GameForm user={user} today={formatBakuDateKey(new Date())} initialSport={sport ?? undefined} />
+  // Pages stay mounted between navigations (cacheComponents keeps them in <Activity>), so a form seen
+  // before would come back with the number it started with. Keyed on the profile's number, it
+  // starts over when that changes.
+  return (
+    <GameForm
+      key={user.phoneNumber ?? 'no-phone'}
+      user={user}
+      today={formatBakuDateKey(new Date())}
+      initialSport={sport ?? undefined}
+    />
+  )
 }

@@ -12,6 +12,8 @@ export type GameListResponse = Awaited<ReturnType<typeof findGames>>
 /** One page of game cards: `GET /api/v1/games` and `GET /api/v1/me/games` both answer with this. */
 export type GamePage = { games: GameCard[]; pagination: GameListResponse['pagination'] }
 export type SportSummary = ReturnType<typeof countOpenGamesBySport>[number]
+/** One sport tab above a game list: its games counted for that list (open ones, or past ones). */
+export type SportTab = { sport: string; label: string; iconKey: string; count: number }
 export type Venue = ReturnType<typeof normalizeVenue>
 export type Participant = FeaturedGame['participants']['preview'][number]
 
@@ -25,6 +27,8 @@ export type CreateGameRequest = {
   maxCount: number
   hostPhone?: string
   title?: string
+  /** Replace the profile's number with `hostPhone` ("Bu nömrəni profilimdə saxla"). */
+  saveToProfile?: boolean
 }
 
 export type MyProfile = NonNullable<Awaited<ReturnType<typeof getMyProfile>>>

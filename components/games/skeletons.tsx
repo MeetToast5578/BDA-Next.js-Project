@@ -4,6 +4,7 @@ import formStyles from '@/components/create/GameForm.module.css'
 import carousel from '@/components/home/TicketCarousel.module.css'
 import profile from '@/components/profile/Profile.module.css'
 import form from '@/components/ui/form.module.css'
+import segmented from '@/components/ui/segmented.module.css'
 import card from './GameCard.module.css'
 import detail from './GameDetail.module.css'
 import grid from './GamesGrid.module.css'
@@ -94,6 +95,7 @@ export function GamesSectionSkeleton({
   titleLevel = 'h2',
   cards,
   backLink,
+  whenLinks = false,
 }: {
   id?: string
   eyebrow?: string
@@ -101,6 +103,8 @@ export function GamesSectionSkeleton({
   titleLevel?: 'h1' | 'h2'
   cards: number
   backLink?: React.ReactNode
+  /** The "Qarşıdakı / Keçmiş" switch of the two list pages. */
+  whenLinks?: boolean
 }) {
   const Heading = titleLevel
   const standalone = titleLevel === 'h1'
@@ -111,6 +115,12 @@ export function GamesSectionSkeleton({
         <Heading className={section.title}>{title}</Heading>
         <Bone className={sk.line} style={{ width: 230, height: 20, marginBlock: 2 }} />
       </div>
+      {whenLinks && (
+        <div className={segmented.segments}>
+          <Bone style={{ height: 40, borderRadius: 10 }} />
+          <Bone style={{ height: 40, borderRadius: 10 }} />
+        </div>
+      )}
     </div>
   )
 
@@ -338,7 +348,7 @@ export function ProfileSkeleton() {
               </li>
             ))}
           </ul>
-          <div className={profile.segments}>
+          <div className={segmented.segments}>
             <Bone style={{ height: 40, borderRadius: 10 }} />
             <Bone style={{ height: 40, borderRadius: 10 }} />
           </div>

@@ -6,7 +6,7 @@ import { BackLink } from '@/components/games/BackLink'
 import { GameForm } from '@/components/create/GameForm'
 import styles from '@/components/create/GameForm.module.css'
 import { GameFormSkeleton } from '@/components/games/skeletons'
-import { formatBakuDateKey } from '@/lib/game-backend'
+import { formatBakuDateKey, isUpcoming } from '@/lib/game-backend'
 import { getGameDetail } from '@/lib/game-queries'
 import { loginHref } from '@/lib/safe-redirect'
 import { getCurrentUser } from '@/lib/session'
@@ -67,8 +67,9 @@ async function EditGameForm({ params }: Props) {
   // proxy.ts already sends visitors without a session cookie to /login; this catches an expired one.
   if (!user) redirect(loginHref(`/games/${gameId}/edit`))
   if (!game) notFound()
-  // The game is public, so a non-host just goes back to reading it rather than getting a 404.
-  if (!game.viewer.isHost) redirect(`/games/${gameId}`)
+  // The game is public, so a non-host just goes back to reading it rather than getting a 404; so does
+  // the host of a game that has started, which can no longer be changed.
+  if (!game.viewer.isHost || !isUpcoming(game.status)) redirect(`/games/${gameId}`)
 
   return <GameForm user={user} today={formatBakuDateKey(new Date())} game={game} />
 }

@@ -32,7 +32,6 @@ export const LEVEL_OPTIONS = [
 /** Button label for games that can't be joined. */
 export const STATUS_LABELS: Record<Exclude<AvailabilityStatus, 'open'>, string> = {
   full: 'Dolu',
-  closed: 'Qeydiyyat bağlıdır',
   live: 'Oyun davam edir',
   finished: 'Oyun bitib',
   cancelled: 'Ləğv edilib',

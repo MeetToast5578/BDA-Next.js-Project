@@ -5,6 +5,7 @@ import { invalidateGamesCache } from '@/lib/cache-tags'
 import { normalizePhone } from '@/lib/game-backend'
 import { getGameDetail, getPayloadClient } from '@/lib/game-queries'
 import { claimSpot, recordJoinAttempt, type JoinErrorCode } from '@/lib/join-game'
+import { rememberPhone } from '@/lib/profile-queries'
 
 const JOIN_ERRORS: Record<JoinErrorCode, { status: number; message: string }> = {
   GAME_NOT_FOUND: { status: 404, message: 'Oyun tapılmadı.' },
@@ -17,6 +18,8 @@ const JOIN_ERRORS: Record<JoinErrorCode, { status: number; message: string }> = 
  * "Oyuna qoşul". Requires a signed-in user. The JSON body `{ name, phone }` is what step 1 of the join
  * modal collected; both are required and re-validated here, since the client's checks are only a
  * convenience. The response carries the game with the host's phone for the "Bir addım qaldı" step.
+ * The number given is kept on the profile when it has none (or when `saveToProfile` asks), so the
+ * next join or create form starts with it; `savedToProfile` says whether it was.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const gameId = Number((await params).id)
@@ -35,7 +38,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
   const userId = Number(user.id)
 
-  const body = (await request.json().catch(() => null)) as { name?: unknown; phone?: unknown } | null
+  const body = (await request.json().catch(() => null)) as { name?: unknown; phone?: unknown; saveToProfile?: unknown } | null
 
   // Falls back to the profile so a name or number left out still identifies the player to the host.
   const name = (typeof body?.name === 'string' ? body.name : '').trim() || (user.fullName ?? '').trim()
@@ -69,6 +72,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       console.error(error)
       return null
     })
+    // A number typed in step 1 (not the profile's own fallback) is kept for the next form.
+    const typedPhone = normalizePhone(body?.phone)
+    const savedToProfile = typedPhone
+      ? await rememberPhone(userId, typedPhone, { overwrite: body?.saveToProfile === true })
+      : false
 
     return NextResponse.json({
       id: String(gameId),
@@ -77,6 +85,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       currentCount: result.maxCount - result.remainingSpots,
       maxCount: result.maxCount,
       game,
+      savedToProfile,
     })
   } catch (error) {
     console.error(error)

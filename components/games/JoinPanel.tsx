@@ -5,14 +5,17 @@ import { useEffect, useId, useState, useTransition } from 'react'
 
 import { ApiError, postJson } from '@/lib/api-client'
 import type { CurrentUser, GameDetail } from '@/lib/api-types'
-import { normalizePhone } from '@/lib/game-backend'
+import { isUpcoming, normalizePhone } from '@/lib/game-backend'
 import { formatLocalPhone, PHONE_ERROR, PHONE_PREFIX } from '@/lib/phone'
+import { phoneSource, type PhoneSource } from '@/lib/profile-form'
 import { loginHref } from '@/lib/safe-redirect'
+import { expireSession } from '@/lib/session-actions'
 import { buttonClass } from '@/components/ui/button'
 import form from '@/components/ui/form.module.css'
 import { Icon } from '@/components/ui/Icon'
 import { Modal } from '@/components/ui/Modal'
 import { PhoneInput } from '@/components/ui/PhoneInput'
+import { PhoneProfileNote } from '@/components/ui/PhoneProfileNote'
 import { Avatar } from './bits'
 import styles from './JoinPanel.module.css'
 import { LeaveGame } from './LeaveGame'
@@ -20,9 +23,6 @@ import { STATUS_LABELS } from './sports'
 
 /** Errors after which the page data is stale (spot taken, already a player, game closed). */
 const REFRESH_ON = new Set(['ALREADY_JOINED', 'GAME_FULL', 'GAME_NOT_JOINABLE'])
-
-/** A game that hasn't started, which a player may still leave. */
-const LEAVABLE = new Set(['open', 'full'])
 
 const NAME_ERROR = 'Ad və soyadınızı daxil edin.'
 
@@ -47,6 +47,8 @@ export function JoinPanel({ game, user, autoOpen }: { game: GameDetail; user: Cu
   // Prefilled from the profile, but the player can give a different name or number for this game.
   const [name, setName] = useState(user?.fullName ?? '')
   const [phone, setPhone] = useState(formatLocalPhone(user?.phoneNumber ?? ''))
+  const phoneNote: PhoneSource = user ? phoneSource(user.phoneNumber, phone) : 'none'
+  const [savePhone, setSavePhone] = useState(false)
   const [errors, setErrors] = useState<{ name?: string; phone?: string }>({})
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
@@ -97,15 +99,17 @@ export function JoinPanel({ game, user, autoOpen }: { game: GameDetail; user: Cu
     setPending(true)
     setError(null)
     try {
-      await postJson(`/api/v1/games/${game.id}/join`, {
+      const joinedGame = await postJson<{ savedToProfile?: boolean }>(`/api/v1/games/${game.id}/join`, {
         name: name.trim(),
         phone: normalizePhone(`${PHONE_PREFIX}${phone}`),
+        ...(phoneNote === 'differs' && savePhone ? { saveToProfile: true } : {}),
       })
       setJustJoined(true)
       setLeftMessage('')
       setOpen(false)
-      // Brings in the new player count and the host's phone, which only joined players see.
-      startRefresh(() => router.refresh())
+      // Brings in the new player count and the host's phone, which only joined players see. When the
+      // number was kept on the profile, expiring the cached session does that re-render too.
+      startRefresh(() => (joinedGame.savedToProfile ? expireSession() : router.refresh()))
     } catch (err) {
       if (!(err instanceof ApiError)) {
         setError('Hazırda oyuna qoşulmaq mümkün olmadı.')
@@ -132,9 +136,31 @@ export function JoinPanel({ game, user, autoOpen }: { game: GameDetail; user: Cu
       </p>
     ) : null
 
+  const live = game.status === 'live'
+  const played = live || game.status === 'finished'
+
   return (
     <>
-      {game.viewer.isHost ? (
+      {played ? (
+        // Past the start nothing can be joined, left or changed any more; say what happened instead.
+        <div className={styles.past}>
+          <p className={styles.state}>
+            {live && <span className={styles.activeDot} aria-hidden="true" />}
+            {live ? 'Oyun davam edir' : `Oyun keçirilib · ${game.dateLabel}`}
+          </p>
+          {(game.viewer.isHost || joined) && (
+            <p className={styles.pastNote}>
+              {game.viewer.isHost
+                ? live
+                  ? 'Bu oyunun hostu sizsiniz.'
+                  : 'Bu oyunu siz təşkil etdiniz.'
+                : live
+                  ? 'Siz bu oyundasınız. Oyun başladığı üçün artıq ondan çıxmaq mümkün deyil.'
+                  : 'Siz bu oyunda iştirak etdiniz.'}
+            </p>
+          )}
+        </div>
+      ) : game.viewer.isHost ? (
         <p className={styles.state}>Bu oyunun hostu sizsiniz</p>
       ) : joined ? (
         <>
@@ -145,7 +171,7 @@ export function JoinPanel({ game, user, autoOpen }: { game: GameDetail; user: Cu
             Siz bu oyuna qoşulmusunuz
           </p>
           {/* Until kick-off a player can give the spot back; the refresh after it shows "Qoşul" again. */}
-          {LEAVABLE.has(game.status) && (
+          {isUpcoming(game.status) && (
             <LeaveGame
               gameId={game.id}
               onLeft={() => {
@@ -227,7 +253,15 @@ export function JoinPanel({ game, user, autoOpen }: { game: GameDetail; user: Cu
                 }}
                 required
                 invalid={Boolean(errors.phone)}
-                describedBy={errors.phone ? `${id}-phone-error` : undefined}
+                describedBy={[phoneNote === 'none' ? '' : `${id}-phone-note`, errors.phone ? `${id}-phone-error` : '']
+                  .filter(Boolean)
+                  .join(' ')}
+              />
+              <PhoneProfileNote
+                id={`${id}-phone-note`}
+                source={phoneNote}
+                save={savePhone}
+                onSaveChange={setSavePhone}
               />
               {fieldError('phone')}
             </div>

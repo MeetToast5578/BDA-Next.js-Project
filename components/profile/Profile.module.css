@@ -300,51 +300,6 @@
   list-style: none;
 }
 
-/* "Qarşıdakı / Keçmiş": the create form's level picker, as links. */
-.segments {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 140px));
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.segment {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 40px;
-  padding: 0 12px;
-  border: 1px solid var(--color-primary-border);
-  border-radius: 10px;
-  background: var(--color-surface);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text);
-  transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease,
-    color 0.15s ease,
-    transform 0.2s var(--ease-out);
-}
-
-.segment:hover {
-  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
-  transform: translateY(-1px);
-}
-
-.segment:active {
-  transform: scale(0.98);
-}
-
-.segmentActive,
-.segmentActive:hover {
-  border-color: var(--color-primary);
-  background: var(--color-primary);
-  color: #fff;
-}
-
 /* Account section: the panel with "Çıxış", then the danger zone. */
 .account {
   display: flex;
@@ -426,10 +381,6 @@
 
   .roleTabs {
     gap: 10px;
-  }
-
-  .segments {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .notice {

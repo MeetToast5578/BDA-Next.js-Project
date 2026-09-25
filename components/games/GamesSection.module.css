@@ -12,6 +12,11 @@
   gap: 16px;
 }
 
+/* On a list page the head spans the width, so the "Qarşıdakı / Keçmiş" switch sits at its right. */
+.intro > .head {
+  align-self: stretch;
+}
+
 .back {
   display: inline-flex;
   gap: 6px;

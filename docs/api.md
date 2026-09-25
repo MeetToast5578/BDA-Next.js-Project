@@ -17,6 +17,7 @@ Errors always have the shape:
 | Hero carousel                           | `GET /api/v1/games/featured`                         |
 | Sport tabs ("Futbol · 18 açıq oyun")    | `GET /api/v1/sports`                                 |
 | "Açıq oyunlar" grid, "Daha çox"         | `GET /api/v1/games?page=N`                           |
+| "Keçmiş oyunlar" (`/games/past`)        | `GET /api/v1/games?when=past&page=N`                 |
 | Empty state ("Hələ açıq oyun yoxdur")   | `GET /api/v1/games?sport=…` returning `games: []`    |
 | Oyun Detalı                             | `GET /api/v1/games/{id}`                             |
 | Qoşulma modalı, addım 1 → addım 2       | Client-side only; nothing is sent yet                |
@@ -25,7 +26,7 @@ Errors always have the shape:
 | Yeni Oyun Yarat: "Oyunu dərc et"        | `POST /api/v1/games`                                 |
 | Oyunu redaktə et (host only)            | `PATCH /api/v1/games/{id}`                           |
 | Oyunu sil (host only)                   | `DELETE /api/v1/games/{id}`                          |
-| Oyundan çıx                             | `POST /api/v1/games/{id}/leave`                      |
+| Oyundan çıx (game page, profile cards)  | `POST /api/v1/games/{id}/leave`                      |
 | Profil                                  | `GET` / `PATCH` / `DELETE /api/v1/me`                |
 | Mənim oyunlarım                         | `GET /api/v1/me/games?role=…&when=…`                 |
 | Başqa oyunçunun profili                 | `GET /api/v1/users/{id}`                             |
@@ -37,12 +38,17 @@ Joining and creating games require a signed-in account. The create form asks for
 
 Every game carries a server-computed `status` and `remainingSpots` (`lib/game-backend.ts` → `deriveAvailability`). Display these; never recompute them from the counts.
 
+The status follows the clock; no job writes it. A game is `open`/`full` until its start, `live` for
+the sport's usual length (`SPORT_META.durationMinutes`: football 90, basketball 60, tennis 90
+minutes), then `finished`. A status stored on the game (`cancelled`, or one an admin sets) wins.
+Once a game has started it is part of its players' history: it can no longer be joined, left,
+edited, or deleted by its host.
+
 | `status`    | Meaning                                          | Joinable |
 | ----------- | ------------------------------------------------ | -------- |
 | `open`      | Upcoming and at least one spot left              | yes      |
 | `full`      | Upcoming, no spots left                          | no       |
-| `closed`    | Start time has passed but status not yet updated | no       |
-| `live`      | In progress                                      | no       |
+| `live`      | Started, and within the sport's usual length     | no       |
 | `finished`  | Over                                             | no       |
 | `cancelled` | Cancelled                                        | no       |
 
@@ -115,7 +121,10 @@ Only `open` games count. The query is cached (Next data cache, tag `games`, refr
 
 ## `GET /api/v1/games`
 
-The "bu gün / sabah" grid and the "Hamısına bax" list, soonest first.
+The "bu gün / sabah" grid and the "Hamısına bax" list, soonest first. With `when=past`, "Keçmiş
+oyunlar" instead: games that have already started, most recent first, whatever their `from`/`to`.
+Cancelled games are left out of it (it lists games that happened; a player's own history under
+`GET /api/v1/me/games?when=past` still shows them).
 
 | Query    | Default                    | Notes                                                        |
 | -------- | -------------------------- | ------------------------------------------------------------ |
@@ -126,6 +135,7 @@ The "bu gün / sabah" grid and the "Hamısına bax" list, soonest first.
 | `status` | open and full              | `open` → only games with spots left                          |
 | `page`   | `1`                        | 1-based                                                      |
 | `limit`  | `12`                       | 1–50                                                         |
+| `when`   | `upcoming`                 | `upcoming` or `past`. Else `400 INVALID_WINDOW`              |
 
 ```json
 {
@@ -205,22 +215,26 @@ spots move when `maxCount` changes.
 | 401    | `UNAUTHENTICATED`         | Not signed in                                                 |
 | 403    | `NOT_GAME_HOST`           | Signed in, but not this game's host                           |
 | 404    | `GAME_NOT_FOUND`          |                                                               |
+| 409    | `GAME_STARTED`            | The game has started (admins too: they correct it in `/admin`) |
 
 ## `DELETE /api/v1/games/{id}`
 
-"Oyunu sil". **Host only** (admins too). Deletes the game and every participant row pointing at it —
+"Oyunu sil". **Host only** (admins too), and for the host only until the game starts: after that it
+is in its players' past games and stats, so only an admin can delete it (`409 GAME_STARTED`). Deletes the game and every participant row pointing at it —
 the foreign key is `ON DELETE SET NULL`, so the participants have to be removed explicitly or they
 are left orphaned and keep turning up in counts. Both happen in one transaction.
 
 Join attempts are kept: `join_attempts.gameId` is a plain number, so the audit log survives the game.
 
-**200** returns `{ "ok": true, "id": "12" }`. Errors are the `401` / `403` / `404` rows above.
+**200** returns `{ "ok": true, "id": "12" }`. Errors are the `401` / `403` / `404` / `409` rows above.
 
 ## `POST /api/v1/games/{id}/join`
 
 "Oyuna qoşul". Requires a signed-in user (Payload session or Google session cookie).
 
 Body: `{ "name": "Kərim Məmmədov", "phone": "+994 50 210 34 56" }` — what step 1 of the join modal collected. Both are re-validated server-side; either one left out falls back to the profile's value, and a `400` follows if the profile has none.
+
+A `phone` sent is kept on the profile (see [Remembered phone number](#remembered-phone-number)) when the profile has none, or when `"saveToProfile": true` asks to replace it.
 
 **200** also returns the full game detail, now with `host.phone`:
 
@@ -231,7 +245,8 @@ Body: `{ "name": "Kərim Məmmədov", "phone": "+994 50 210 34 56" }` — what s
   "remainingSpots": 0,
   "currentCount": 12,
   "maxCount": 12,
-  "game": { "…": "as GET /api/v1/games/{id}", "host": { "name": "Elvin Abbasov", "phone": "+994502103456" } }
+  "game": { "…": "as GET /api/v1/games/{id}", "host": { "name": "Elvin Abbasov", "phone": "+994502103456" } },
+  "savedToProfile": false
 }
 ```
 
@@ -292,15 +307,28 @@ Options for the "Meydança" picker.
 | `maxCount`      | Even (two equal sides), from 2 up to the sport's full size: football 22, basketball 10, tennis 4 |
 | `hostPhone`     | Optional if the profile has a phone number; shown to players after they join |
 | `title`         | Optional, defaults to "Futbol oyunu" etc. (the design has no title field)  |
+| `saveToProfile` | Optional `true`: also replace the profile's number with `hostPhone` (see [Remembered phone number](#remembered-phone-number)) |
 
 The host name ("Ad Soyad (Host)") comes from the account, so show it read-only.
 
-**201** `{ "game": { …as GET /api/v1/games/{id} } }`. Errors: `401 UNAUTHENTICATED`; `400` with `INVALID_SPORT`, `INVALID_LEVEL`, `INVALID_VENUE`, `INVALID_DATE`, `DATE_IN_PAST`, `INVALID_MAX_COUNT`, `INVALID_CURRENT_COUNT`, `INVALID_PHONE`, `VENUE_NOT_FOUND`, `VENUE_SPORT_MISMATCH`, `PHONE_REQUIRED`.
+**201** `{ "game": { …as GET /api/v1/games/{id} }, "savedToProfile": true }`. Errors: `401 UNAUTHENTICATED`; `400` with `INVALID_SPORT`, `INVALID_LEVEL`, `INVALID_VENUE`, `INVALID_DATE`, `DATE_IN_PAST`, `INVALID_MAX_COUNT`, `INVALID_CURRENT_COUNT`, `INVALID_PHONE`, `VENUE_NOT_FOUND`, `VENUE_SPORT_MISMATCH`, `PHONE_REQUIRED`.
+
+### Remembered phone number
+
+The create form and the join modal start from the profile's number, so the number someone types is
+kept there for next time: after a successful create or join, the `hostPhone` / `phone` sent becomes
+the profile's number **when the profile has none**. A different number already on the profile is
+only replaced when the body carries `"saveToProfile": true` (the forms' "Bu nömrəni profilimdə
+saxla" checkbox). A number another account holds is never taken — numbers are unique per account —
+and a failure here never fails the create or join. `savedToProfile` in the response says whether the
+profile changed; the client then calls the `expireSession` Server Action so the header and the next
+form don't keep showing the session it had cached.
 
 ## `POST /api/v1/games/{id}/leave`
 
-"Oyundan çıx". Requires a signed-in user and hands the spot back to the game. Allowed right up to
-kick-off. The host cannot leave their own game — they delete it instead.
+"Oyundan çıx", on the game page and on the profile's "Qoşulduğum · Qarşıdakı" cards. Requires a
+signed-in user and hands the spot back to the game. Allowed right up to kick-off. The host cannot
+leave their own game — they delete it instead.
 
 The participant row is deleted first, and the spot only returned when that DELETE actually removed
 something, so calling this repeatedly cannot push `available_players` past `max_players` and invent

@@ -1,5 +1,10 @@
 # Leaving games, past games, and the remembered phone number: plan
 
+> **Status: built.** All five phases are done, with the decisions in §6 as suggested and the leave
+> cut-off at the start time. They were verified on a production build (`next build && next start`)
+> as well as `next dev`. Where the build departs from the plan, §5 says so under the task. The one
+> open item is a native speaker's read of the new Azerbaijani strings.
+
 Three requests, checked against the code as it is on `main` after PR #7:
 
 1. **Leave a game after joining, but only before it starts.** Mostly **already built** in PR #7 (§1).
@@ -164,7 +169,7 @@ request with the most visible effect.
 
 ### Phase 1: The phone number follows the profile
 
-- [ ] **T1.1 Expire the cached session on profile changes.**
+- [x] **T1.1 Expire the cached session on profile changes.**
       - `lib/session.ts`: add `cacheTag(sessionTag(user.id))` in `getCurrentUser`.
       - New `app/(frontend)/profile/actions.ts` → `expireSession()`: re-reads the session, then
         calls `updateTag`.
@@ -172,84 +177,126 @@ request with the most visible effect.
       - Verify with `next build && next start`: save a number, go to "Oyun yarat" by client-side
         navigation, and the field is filled. Also check that the header chip on another page shows a
         new name. Use the `revalidatePath` fallback if needed.
-- [ ] **T1.2 `rememberPhone(userId, phone, { overwrite })`** in `lib/profile-queries.ts`.
+
+      *As built:*
+      - `expireSession()` lives in `lib/session-actions.ts`, since create and join call it too. It
+        replaces `router.refresh()`, because a Server Action's `updateTag` already re-renders the
+        page.
+      - Tracing the production build showed a second cause. The navigation did fetch the new user,
+        but React's `<Activity>` keeps a visited page mounted, so the old form state (the empty
+        field) came back with it. `GameForm` and `JoinPanel` are now keyed on the profile's phone
+        number, which is the fix the Next docs give for this.
+      - `updateTag` stays, for `next dev` (which cached the stale user on the server) and the header
+        chip. The `revalidatePath` fallback wasn't needed.
+- [x] **T1.2 `rememberPhone(userId, phone, { overwrite })`** in `lib/profile-queries.ts`.
       - Saves the number when the profile has none, or when `overwrite` is set.
       - Skips when another account holds it, reusing `updateMyProfile`'s uniqueness check.
       - Returns whether it saved, and never throws into the caller.
-- [ ] **T1.3 Create and join remember the number.** `POST /api/v1/games` and
+- [x] **T1.3 Create and join remember the number.** `POST /api/v1/games` and
       `POST /api/v1/games/{id}/join`:
       - after success, call `rememberPhone`;
       - accept `saveToProfile: true` for the overwrite case;
       - return `savedToProfile`.
 
       Both clients call `expireSession()` when it's `true`.
-- [ ] **T1.4 Field hints and checkbox** in `GameForm` and `JoinPanel`, per §4. It lives in the
+- [x] **T1.4 Field hints and checkbox** in `GameForm` and `JoinPanel`, per §4. It lives in the
       shared `PhoneInput` area, so both forms get it from one place. The profile number is passed
       in; the component works out which of the three states applies.
-- [ ] **T1.5 Tests.**
+
+      *As built:* the state is worked out by `phoneSource()` in `lib/profile-form.ts`, so it can be
+      unit-tested. `components/ui/PhoneProfileNote.tsx` renders it under either form's field, and
+      `PhoneInput` is unchanged.
+- [x] **T1.5 Tests.**
       - Database: `rememberPhone` fills an empty profile, leaves a set one alone unless asked, and
         skips a number another account holds; create and join save only when they should.
       - Unit: the three hint states.
       - Browser, on a production build: the flow above, plus "create a game with a new number, then
         open 'Oyun yarat' again and it's filled".
-- [ ] **T1.6 Docs:** `saveToProfile` / `savedToProfile` in `docs/api.md` (create and join).
+
+      *As built:* the database tests cover `rememberPhone` itself. The browser pass covered when
+      create and join save, including the create API's `savedToProfile`.
+- [x] **T1.6 Docs:** `saveToProfile` / `savedToProfile` in `docs/api.md` (create and join).
 
 ### Phase 2: Game lifecycle
 
-- [ ] **T2.1 Status follows the clock.** `deriveAvailability`: `closed` becomes `live` / `finished`,
+- [x] **T2.1 Status follows the clock.** `deriveAvailability`: `closed` becomes `live` / `finished`,
       using a new `SPORT_META[sport].durationMinutes`.
       - Update `STATUS_LABELS`, the `closed` filter in `findGames` (keep only `open` / `full`), the
         `AvailabilityStatus` type, `docs/api.md`'s status table, and the tests that expect `closed`.
-- [ ] **T2.2 Freeze started games.**
+- [x] **T2.2 Freeze started games.**
       - `PATCH /api/v1/games/{id}` answers 409 `GAME_STARTED` once the game has started or isn't
         `scheduled`.
       - The edit page redirects to the game, the game page hides "Oyunu redaktə et", and
         `GameForm`'s error table gets `GAME_STARTED`.
       - Database test: a past game can't be moved into the future.
-- [ ] **T2.3 Delete after start** (per the decision): `DELETE /api/v1/games/{id}` refuses once the
+
+      *As built:* the edit refusal applies to admins too, so an admin who needs to change a played
+      game does it in `/admin`. `tests/game-freeze.test.ts` calls the route handlers with real
+      sessions; its tests fail against the old route.
+- [x] **T2.3 Delete after start** (per the decision): `DELETE /api/v1/games/{id}` refuses once the
       game has started (admins unaffected). The danger zone isn't reachable anyway, since the edit
       page redirects.
-- [ ] **T2.4 The game page's past state** in `JoinPanel`: the "Oyun keçirilib · {date}" or "Oyun
+- [x] **T2.4 The game page's past state** in `JoinPanel`: the "Oyun keçirilib · {date}" or "Oyun
       davam edir" pill replaces the disabled button, plus "Siz bu oyunda iştirak etdiniz" for players
       who were in it.
 
 ### Phase 3: Past games catalog
 
-- [ ] **T3.1 API.** `parseGameListParams` gains `when` (`upcoming` default, `past`).
+- [x] **T3.1 API.** `parseGameListParams` gains `when` (`upcoming` default, `past`).
       - `findGames` gets a past branch: started, not cancelled, newest first, time rounded like
         today's.
       - `getOpenGamesCountBySport` gets a past counterpart for the tabs.
       - Unit tests for the parser; a database test for ordering and the cancelled exclusion.
-- [ ] **T3.2 Shared segmented control.** Pull the profile's "Qarşıdakı | Keçmiş" out into
+
+      *As built:* the past queries are `use cache` functions, and `next/cache` throws outside Next,
+      so Vitest can't call them. Instead, the ordering, the cancelled exclusion, the sport filter and
+      the paging were checked against the database through the API on a running server.
+- [x] **T3.2 Shared segmented control.** Pull the profile's "Qarşıdakı | Keçmiş" out into
       `components/ui/SegmentedLinks.tsx` (links, optimistic, `data-pending`), and use it on both pages.
-- [ ] **T3.3 `/games?when=past`.**
+- [x] **T3.3 `/games?when=past`.**
       - `GamesSection` takes `when`: title, tab counts ("N keçmiş oyun"), card context `past`, the
         empty state, and `GamesGrid`'s query.
       - The skeleton follows.
       - `when` is kept when switching sport, and the sport when switching `when`.
-- [ ] **T3.4 Docs:** `GET /api/v1/games` `when=past` in `docs/api.md`; README routes.
+
+      *As built:* the page is its own route, `/games/past`, rather than a query on `/games`. That
+      gives it its own title, metadata and prerendered shell. The API still takes `when=past`, and
+      "Oyunların vaxtı" (Qarşıdakı | Keçmiş) switches between the two routes, keeping the sport.
+- [x] **T3.4 Docs:** `GET /api/v1/games` `when=past` in `docs/api.md`; README routes.
 
 ### Phase 4: Leaving: the remaining edges
 
-- [ ] **T4.1 Explain the missing button.** For a joined player after kick-off, show "Oyun başlayıb —
+- [x] **T4.1 Explain the missing button.** For a joined player after kick-off, show "Oyun başlayıb —
       artıq çıxmaq mümkün deyil" under "Siz bu oyuna qoşulmusunuz" until the game is `finished`, when
       T2.4's state takes over.
-- [ ] **T4.2 Leave from the profile** *(optional)*. On "Qoşulduğum · Qarşıdakı" cards, a secondary
+
+      *As built:* this is part of T2.4's `live` state: "Oyun davam edir", then "Siz bu oyundasınız.
+      Oyun başladığı üçün artıq ondan çıxmaq mümkün deyil."
+- [x] **T4.2 Leave from the profile** *(optional)*. On "Qoşulduğum · Qarşıdakı" cards, a secondary
       "Çıx" beside "Oyuna bax" opens the same confirm (`LeaveGame`, reused). On success the card
       leaves the list and the count updates.
-- [ ] **T4.3 Cut-off** *(only if a buffer is wanted)*. Add `LEAVE_CUTOFF_MINUTES` in
+
+      *As built:* "Oyundan çıx" *replaces* "Oyuna bax" on those cards, because the card's title and
+      image already open the game. It only shows before kick-off. A card for a game that has started
+      goes back to "Oyuna bax".
+- [ ] ~~**T4.3 Cut-off** *(only if a buffer is wanted)*. Add `LEAVE_CUTOFF_MINUTES` in
       `lib/game-backend.ts`, used by `releaseSpot`'s SQL (`scheduled_at > now() + interval`) and by
-      the page's button. Database test at the boundary.
+      the page's button. Database test at the boundary.~~
+
+      *Not needed:* decision 4 keeps the cut-off at the start time, which `releaseSpot` already
+      enforces.
 
 ### Phase 5: Verification
-- [ ] typecheck, lint, all tests against a real Postgres, `npm run build`.
-- [ ] Browser pass on a production build (`next start`), not only `next dev`: the phone bug only
+- [x] typecheck, lint, all tests against a real Postgres, `npm run build`.
+- [x] Browser pass on a production build (`next start`), not only `next dev`: the phone bug only
       shows its real behaviour there.
 - [ ] A native speaker reads the new Azerbaijani strings.
 
-## 6. Decisions for you
+## 6. Decisions
 
-| # | Question | My suggestion |
+All five went as suggested; for 4, the latest time to leave is right before the game starts.
+
+| # | Question | Decided |
 | --- | --- | --- |
 | 1 | The typed number differs from the profile's | Checkbox "Bu nömrəni profilimdə saxla", unchecked. Alternative: always overwrite with the last used |
 | 2 | When does a game count as over | Start + the sport's usual length (90 / 60 / 90 min). A per-game length would need a new field and a migration |

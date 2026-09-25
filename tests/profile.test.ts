@@ -2,7 +2,14 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { Payload } from 'payload'
 
 import { claimSpot, releaseSpot } from '@/lib/join-game'
-import { deleteMyAccount, findMyGames, getMyProfile, getPublicProfile, updateMyProfile } from '@/lib/profile-queries'
+import {
+  deleteMyAccount,
+  findMyGames,
+  getMyProfile,
+  getPublicProfile,
+  rememberPhone,
+  updateMyProfile,
+} from '@/lib/profile-queries'
 
 const HOUR_MS = 60 * 60 * 1000
 
@@ -226,6 +233,46 @@ describe.skipIf(!process.env.DATABASE_URL)('profile backend (Postgres)', () => {
         ok: false,
         code: 'PHONE_TAKEN',
       })
+    })
+  })
+
+  describe('rememberPhone', () => {
+    // Numbers of their own, so they can't collide with seed data or the tests above.
+    const number = (n: number) => `+99499${String((suffix + n) % 10_000_000).padStart(7, '0')}`
+
+    it('fills an empty profile number, and leaves a set one alone unless asked', async () => {
+      const user = await payload.create({
+        collection: 'users',
+        overrideAccess: true,
+        data: { email: `profile-${suffix}-remember@oyunagel.test`, password: 'profile-test-password', fullName: 'Remember Me' },
+      })
+      const phoneOf = async () => (await payload.findByID({ collection: 'users', id: user.id, overrideAccess: true })).phoneNumber
+      try {
+        expect(await rememberPhone(user.id, number(1))).toBe(true)
+        expect(await phoneOf()).toBe(number(1))
+
+        // Already there: nothing to save.
+        expect(await rememberPhone(user.id, number(1))).toBe(false)
+
+        // A different number doesn't replace the profile's on its own…
+        expect(await rememberPhone(user.id, number(2))).toBe(false)
+        expect(await phoneOf()).toBe(number(1))
+        // …only when the person asked ("Bu nömrəni profilimdə saxla").
+        expect(await rememberPhone(user.id, number(2), { overwrite: true })).toBe(true)
+        expect(await phoneOf()).toBe(number(2))
+      } finally {
+        await payload.delete({ collection: 'users', id: user.id, overrideAccess: true })
+      }
+    })
+
+    it("never takes a number another account holds, and doesn't throw", async () => {
+      await updateMyProfile(player, { phone: number(3) })
+      await updateMyProfile(host, { phone: null })
+
+      expect(await rememberPhone(host, number(3))).toBe(false)
+      expect(await rememberPhone(host, number(3), { overwrite: true })).toBe(false)
+      expect((await getMyProfile(host))?.phoneNumber).toBeNull()
+      expect(await rememberPhone(2_000_000_000, number(4))).toBe(false)
     })
   })
 

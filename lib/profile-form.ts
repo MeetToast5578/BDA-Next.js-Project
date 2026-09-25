@@ -40,3 +40,19 @@ export function profilePatch(
   if (phone !== (saved.phoneNumber ?? null)) patch.phone = phone
   return patch
 }
+
+/**
+ * Where the number in a create or join form stands next to the profile's, for the note under it:
+ * - `profile`: it is the profile's number;
+ * - `will-save`: the profile has none, so the one used will be kept there;
+ * - `differs`: a complete number other than the profile's, which is saved over it only on request;
+ * - `none`: nothing to say yet (a number still being typed).
+ */
+export type PhoneSource = 'profile' | 'will-save' | 'differs' | 'none'
+
+export function phoneSource(profilePhone: string | null, localDigits: string): PhoneSource {
+  if (!profilePhone) return 'will-save'
+  const phone = normalizePhone(`${PHONE_PREFIX}${localDigits}`)
+  if (!phone) return 'none'
+  return phone === profilePhone ? 'profile' : 'differs'
+}

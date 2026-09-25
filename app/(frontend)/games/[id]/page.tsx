@@ -11,6 +11,7 @@ import { JoinPanel } from '@/components/games/JoinPanel'
 import { GameDetailSkeleton } from '@/components/games/skeletons'
 import { buttonClass } from '@/components/ui/button'
 import { Icon } from '@/components/ui/Icon'
+import { isUpcoming } from '@/lib/game-backend'
 import { getGameDetail } from '@/lib/game-queries'
 import { formatPhone } from '@/lib/phone'
 import { loginHref } from '@/lib/safe-redirect'
@@ -80,6 +81,8 @@ async function GameDetailContent({ params, searchParams }: Props) {
 
   const location = [game.venue.name, game.venue.district].filter(Boolean).join(', ')
   const { participants, host } = game
+  // Once it has started, the page describes a game that happened rather than one to join.
+  const upcoming = isUpcoming(game.status)
 
   return (
     <div className={`${styles.layout} fade`}>
@@ -172,21 +175,26 @@ async function GameDetailContent({ params, searchParams }: Props) {
               <p className={styles.hostNote}>
                 {game.viewer.isHost
                   ? 'Oyunu siz yaratmısınız · Bu nömrə qoşulan oyunçulara görünür'
-                  : 'Oyunu yaradıb · Oyuna gələcəyinizi təsdiq etmək üçün host ilə əlaqə saxlayın'}
+                  : upcoming
+                    ? 'Oyunu yaradıb · Oyuna gələcəyinizi təsdiq etmək üçün host ilə əlaqə saxlayın'
+                    : 'Oyunu təşkil edib'}
               </p>
             </>
           ) : (
-            <p className={styles.hostNote}>Oyunu yaradıb · Əlaqə oyuna qoşulduqdan sonra görünür</p>
+            <p className={styles.hostNote}>
+              {upcoming ? 'Oyunu yaradıb · Əlaqə oyuna qoşulduqdan sonra görünür' : 'Oyunu təşkil edib'}
+            </p>
           )}
         </section>
 
-        {game.viewer.isHost && (
+        {game.viewer.isHost && upcoming && (
           <Link href={`/games/${game.id}/edit`} className={buttonClass('outlinePrimary', 'lg', { block: true })}>
             Oyunu redaktə et
           </Link>
         )}
 
-        <JoinPanel game={game} user={user} autoOpen={wantsToJoin && canJoin} />
+        {/* Keyed like the create form: a page kept mounted since a profile change prefills the new number. */}
+        <JoinPanel key={user?.phoneNumber ?? 'no-phone'} game={game} user={user} autoOpen={wantsToJoin && canJoin} />
       </aside>
     </div>
   )

@@ -8,6 +8,7 @@ import {
   formatBakuMonthYear,
   formatBakuShortDate,
   initialsOf,
+  isUpcoming,
   normalizeCity,
   normalizeGameRecord,
   normalizePhone,
@@ -92,9 +93,21 @@ describe('deriveAvailability', () => {
     expect(deriveAvailability(game({ availablePlayers: undefined }), NOW).remainingSpots).toBe(10)
   })
 
-  it('closes games whose start time has passed', () => {
-    expect(deriveAvailability(game({ scheduledAt: inHours(-1) }), NOW).status).toBe('closed')
-    expect(deriveAvailability(game({ scheduledAt: new Date(NOW).toISOString() }), NOW).status).toBe('closed')
+  it('is live from its start for the sport\'s usual length, then finished — no job needed', () => {
+    const minutesAgo = (minutes: number) => new Date(NOW - minutes * 60_000).toISOString()
+    // Football lasts 90 minutes.
+    expect(deriveAvailability(game({ sport: 'football', scheduledAt: new Date(NOW).toISOString() }), NOW).status).toBe('live')
+    expect(deriveAvailability(game({ sport: 'football', scheduledAt: minutesAgo(89) }), NOW).status).toBe('live')
+    expect(deriveAvailability(game({ sport: 'football', scheduledAt: minutesAgo(90) }), NOW).status).toBe('finished')
+    // Basketball, 60.
+    expect(deriveAvailability(game({ sport: 'basketball', scheduledAt: minutesAgo(59) }), NOW).status).toBe('live')
+    expect(deriveAvailability(game({ sport: 'basketball', scheduledAt: minutesAgo(61) }), NOW).status).toBe('finished')
+    // A week-old game that nobody touched since it was created is simply over.
+    expect(deriveAvailability(game({ scheduledAt: inHours(-24 * 7) }), NOW).status).toBe('finished')
+  })
+
+  it('keeps a stored cancellation over the clock', () => {
+    expect(deriveAvailability(game({ status: 'cancelled', scheduledAt: inHours(-1) }), NOW).status).toBe('cancelled')
   })
 
   it.each(['cancelled', 'finished', 'live'])('keeps the %s status even with spots left', (status) => {
@@ -159,7 +172,7 @@ describe('countOpenGamesBySport', () => {
         { sport: 'football', status: 'open' },
         { sport: 'football', status: 'open' },
         { sport: 'football', status: 'full' },
-        { sport: 'tennis', status: 'closed' },
+        { sport: 'tennis', status: 'live' },
         { sport: 'curling', status: 'open' },
       ]),
     ).toEqual([
@@ -170,8 +183,16 @@ describe('countOpenGamesBySport', () => {
   })
 })
 
+describe('isUpcoming', () => {
+  it('is true only before the start', () => {
+    expect(isUpcoming('open')).toBe(true)
+    expect(isUpcoming('full')).toBe(true)
+    for (const status of ['live', 'finished', 'cancelled'] as const) expect(isUpcoming(status)).toBe(false)
+  })
+})
+
 describe('rankFeatured', () => {
-  const game = (id: string, hours: number, currentCount: number, status: 'open' | 'full' | 'closed' = 'open') => ({
+  const game = (id: string, hours: number, currentCount: number, status: 'open' | 'full' | 'live' = 'open') => ({
     id,
     status,
     startsAt: inHours(hours),
@@ -186,7 +207,7 @@ describe('rankFeatured', () => {
         game('soon-half', 2, 5),
         game('soon-almost-full', 2, 9),
         game('full', 1, 10, 'full'),
-        game('started', -1, 5, 'closed'),
+        game('started', -1, 5, 'live'),
       ],
       NOW,
     )
@@ -391,6 +412,7 @@ describe('parseGameListParams', () => {
     expect(parse('')).toEqual({
       ok: true,
       query: {
+        when: 'upcoming',
         sport: null,
         city: 'baku',
         from: new Date(NOW),
@@ -412,6 +434,14 @@ describe('parseGameListParams', () => {
     expect(parse('city=Paris')).toMatchObject({ ok: false, code: 'UNKNOWN_CITY' })
     expect(parse('to=tomorrow')).toMatchObject({ ok: false, code: 'INVALID_DATE' })
     expect(parse('status=full')).toMatchObject({ ok: false, code: 'INVALID_STATUS' })
+    expect(parse('when=later')).toMatchObject({ ok: false, code: 'INVALID_WINDOW' })
+  })
+
+  it('switches to the games that already happened with when=past', () => {
+    expect(parse('when=past&sport=football&page=2')).toMatchObject({
+      ok: true,
+      query: { when: 'past', sport: 'football', page: 2, limit: 12 },
+    })
   })
 })
 
