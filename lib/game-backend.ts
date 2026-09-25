@@ -56,10 +56,10 @@ const DAY_MS = 24 * HOUR_MS
 const BAKU_OFFSET_MS = 4 * HOUR_MS
 
 // Short forms as used on the game cards ("Cüm, 2 Avq"); ICU's az-AZ short forms ("B.", "avq") differ.
-const WEEKDAYS_SHORT = ['Baz', 'B.e.', 'Ç.a.', 'Çər', 'C.a.', 'Cüm', 'Şən']
+export const WEEKDAYS_SHORT = ['Baz', 'B.e.', 'Ç.a.', 'Çər', 'C.a.', 'Cüm', 'Şən']
 const MONTHS_SHORT = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'İyn', 'İyl', 'Avq', 'Sen', 'Okt', 'Noy', 'Dek']
 // Spelled out rather than taken from ICU, so the label is the same whatever ICU build the server runs.
-const MONTHS_LONG = [
+export const MONTHS_LONG = [
   'yanvar',
   'fevral',
   'mart',
@@ -99,21 +99,25 @@ function toCount(value: unknown) {
  * `status` / `remainingSpots` instead of re-deriving them from the player counts.
  *
  * A game moves along with the clock, not by a job writing to it: `open`/`full` until it starts,
- * `live` for the sport's usual length (`SPORT_META.durationMinutes`), then `finished`. A status
- * stored on the game — cancelled, or one an admin set — always wins.
+ * `live` for the sport's usual length (`SPORT_META.durationMinutes`), then `finished`. A stored
+ * `cancelled` or `finished` always wins. A stored `live` (an admin's, or the seed's) holds only
+ * until that usual end, then it is `finished` like any other game: nothing ever writes the status
+ * back, so otherwise it would read "Davam edir" forever.
  */
 export function deriveAvailability(raw: unknown, now = Date.now()) {
   const game = asDoc(raw) ?? {}
   const maxCount = toCount(game.maxPlayers)
   const remainingSpots = Math.min(toCount(game.availablePlayers ?? maxCount), maxCount)
   const startsAt = game.scheduledAt ? Date.parse(String(game.scheduledAt)) : Number.NaN
+  const { durationMinutes } = SPORT_META[String(game.sport)] ?? SPORT_META.football
+  const endsAt = startsAt + durationMinutes * 60_000
 
   let status: AvailabilityStatus
-  if (game.status === 'cancelled' || game.status === 'finished' || game.status === 'live') {
+  if (game.status === 'cancelled' || game.status === 'finished') {
     status = game.status
-  } else if (startsAt <= now) {
-    const { durationMinutes } = SPORT_META[String(game.sport)] ?? SPORT_META.football
-    status = now < startsAt + durationMinutes * 60_000 ? 'live' : 'finished'
+  } else if (game.status === 'live' || startsAt <= now) {
+    // A stored `live` without a start time has no end to reach, so it stays as stored.
+    status = now < endsAt || Number.isNaN(startsAt) ? 'live' : 'finished'
   } else {
     status = remainingSpots > 0 ? 'open' : 'full'
   }

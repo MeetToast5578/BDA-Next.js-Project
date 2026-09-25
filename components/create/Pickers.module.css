@@ -1,0 +1,517 @@
+/* Date and time popovers on "Yeni Oyun Yarat": a hero-gradient header over a white card. */
+.popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  z-index: 30;
+  width: 300px;
+  padding-bottom: 12px;
+  overflow: hidden;
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow:
+    0 24px 48px -18px color-mix(in srgb, var(--color-primary-night) 45%, transparent),
+    0 4px 12px rgba(0, 0, 0, 0.04);
+  animation: popIn 0.34s var(--ease-spring);
+}
+
+/* Focusable (tabIndex -1) so a press on its text keeps focus inside instead of moving it to <main>. */
+.popover:focus {
+  outline: none;
+}
+
+.start {
+  left: 0;
+  transform-origin: top left;
+}
+
+.end {
+  right: 0;
+  transform-origin: top right;
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.94);
+  }
+}
+
+@media (max-width: 560px) {
+  .popover {
+    right: 0;
+    left: 0;
+    width: auto;
+  }
+}
+
+/* Header band, with a light sweep across it as it opens. */
+.head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px;
+  overflow: hidden;
+  background: var(--hero-gradient);
+  color: #fff;
+}
+
+.head::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.22) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: sheen 1.1s 0.12s var(--ease-out) forwards;
+  pointer-events: none;
+}
+
+@keyframes sheen {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.monthTitle {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: capitalize;
+  animation: fadeUp 0.3s var(--ease-out);
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  background: var(--glass-bg);
+  color: #fff;
+  transition:
+    background-color 0.15s ease,
+    opacity 0.15s ease,
+    transform 0.25s var(--ease-spring);
+}
+
+.nav svg {
+  width: 7px;
+  height: 12px;
+}
+
+.back svg {
+  transform: rotate(180deg);
+}
+
+.nav:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.28);
+  transform: scale(1.08);
+}
+
+.nav:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.nav:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.head button:focus-visible {
+  outline: 2px solid var(--focus-ring-on-dark);
+  outline-offset: 2px;
+}
+
+/* Calendar */
+.weekdays,
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  padding-inline: 12px;
+}
+
+.weekdays {
+  padding-block: 12px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-subtle);
+  text-align: center;
+}
+
+.next {
+  animation: slideNext 0.3s var(--ease-out);
+}
+
+.prev {
+  animation: slidePrev 0.3s var(--ease-out);
+}
+
+@keyframes slideNext {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+
+@keyframes slidePrev {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+}
+
+.day,
+.cell {
+  position: relative;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-heading);
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.2s ease,
+    transform 0.25s var(--ease-spring);
+}
+
+.day {
+  aspect-ratio: 1;
+}
+
+.day:hover:not(:disabled),
+.cell:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+  background: var(--color-primary-tint);
+  transform: translateY(-2px);
+}
+
+.day:active:not(:disabled),
+.cell:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+/* Days and times that have gone. */
+.day:disabled,
+.cell:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.cell:disabled {
+  text-decoration: line-through;
+}
+
+.day:focus-visible,
+.cell:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+/* Today: an accent dot under the number. */
+.today::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  transform: translateX(-50%);
+}
+
+.day[aria-pressed='true'],
+.cell[aria-pressed='true'] {
+  border-color: transparent;
+  background: var(--hero-gradient);
+  color: #fff;
+  box-shadow: 0 8px 16px -6px color-mix(in srgb, var(--color-primary) 65%, transparent);
+  transform: none;
+  animation: pop 0.42s var(--ease-spring);
+}
+
+.today[aria-pressed='true']::after {
+  background: #fff;
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(0.7);
+  }
+  60% {
+    transform: scale(1.12);
+  }
+}
+
+.foot {
+  display: flex;
+  gap: 8px;
+  margin: 10px 12px 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-primary-border-soft);
+}
+
+.chip {
+  flex: 1;
+  height: 32px;
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-primary);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.25s var(--ease-spring);
+}
+
+.chip:hover {
+  background: var(--color-primary);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.chip:active {
+  transform: scale(0.96);
+}
+
+/* Time: a big "19 : 30" readout; the hour or minute part picks which grid shows. */
+.clockHead {
+  padding-block: 14px;
+}
+
+.display {
+  display: flex;
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.part {
+  min-width: 58px;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  font: inherit;
+  color: rgba(255, 255, 255, 0.6);
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.25s var(--ease-spring);
+}
+
+.part:hover:not(:disabled) {
+  color: #fff;
+}
+
+.part[aria-pressed='true'] {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--glass-bg);
+  color: #fff;
+}
+
+.part:disabled {
+  cursor: default;
+}
+
+.colon {
+  padding-inline: 2px;
+  animation: blink 1.2s ease-in-out infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.stepLabel {
+  padding: 12px 14px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-subtle);
+}
+
+.cells {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  padding-inline: 12px;
+}
+
+.cell {
+  height: 36px;
+  border-color: var(--color-primary-border-soft);
+  background: var(--color-primary-tint);
+  animation: rise 0.34s var(--ease-spring) backwards;
+  animation-delay: calc(var(--i, 0) * 12ms);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.9);
+  }
+}
+
+/*
+ * Two-way switch with a gradient pill that slides to the chosen side. Used for 24 saat / 12 saat
+ * beside the "Saat" label, and (on dark) for AM / PM in the time popover.
+ */
+.toggle {
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  flex-shrink: 0;
+  padding: 2px;
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-tint);
+  isolation: isolate;
+}
+
+.toggle::before {
+  content: '';
+  position: absolute;
+  inset: 2px auto 2px 2px;
+  z-index: -1;
+  width: calc(50% - 2px);
+  border-radius: var(--radius-pill);
+  background: var(--hero-gradient);
+  box-shadow: var(--shadow-button);
+  transition: transform 0.4s var(--ease-spring);
+}
+
+.toggle:has(.toggleOption:nth-child(2) input:checked)::before {
+  transform: translateX(100%);
+}
+
+.toggleOption {
+  position: relative;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--color-muted);
+  text-align: center;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.toggleOption:hover {
+  color: var(--color-primary);
+}
+
+.toggleOption:has(input:checked) {
+  color: #fff;
+}
+
+.toggleOption input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* AM once the whole morning has gone. */
+.toggleOption:has(input:disabled) {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.toggleOption:has(input:focus-visible) {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.toggleOnDark {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--glass-bg);
+}
+
+.toggleOnDark::before {
+  background: #fff;
+  box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.35);
+}
+
+.toggleOnDark .toggleOption {
+  padding: 5px 11px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.toggleOnDark .toggleOption:hover {
+  color: #fff;
+}
+
+.toggleOnDark .toggleOption:has(input:checked) {
+  color: var(--color-primary);
+}
+
+.toggleOnDark .toggleOption:has(input:focus-visible) {
+  outline-color: var(--focus-ring-on-dark);
+}
+
+/* The date-format <select>, as a pill with a chevron to match the toggle beside "Saat". */
+.select {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--color-primary);
+}
+
+.select::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  width: 5px;
+  height: 9px;
+  background: currentColor;
+  -webkit-mask: url('/icons/chevron.svg') center / contain no-repeat;
+  mask: url('/icons/chevron.svg') center / contain no-repeat;
+  transform: translateY(-50%) rotate(90deg);
+  pointer-events: none;
+}
+
+.select select {
+  appearance: none;
+  padding: 3px 26px 3px 10px;
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-tint);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.select select:hover {
+  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+  background: var(--color-surface);
+}

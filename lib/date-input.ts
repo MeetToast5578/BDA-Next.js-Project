@@ -15,12 +15,31 @@ export type DateFormat = keyof typeof DATE_FORMATS
 
 export const TIME_FORMATS = {
   '24h': { label: '24 saat', example: '19:30' },
-  '12h': { label: '12 saat (AM/PM)', example: '7:30 PM' },
+  '12h': { label: '12 saat', example: '7:30 PM' },
 }
 
 export type TimeFormat = keyof typeof TIME_FORMATS
 
-const pad = (value: number) => String(value).padStart(2, '0')
+export const pad = (value: number) => String(value).padStart(2, '0')
+
+/** "2026-09-30" moved by `days` → "2026-10-01". */
+export function addDays(isoDate: string, days: number) {
+  return new Date(Date.parse(isoDate) + days * 86_400_000).toISOString().slice(0, 10)
+}
+
+/** "2026-12" moved by `months` → "2027-01". */
+export function addMonths(month: string, months: number) {
+  const [year, index] = month.split('-').map(Number)
+  return new Date(Date.UTC(year, index - 1 + months, 1)).toISOString().slice(0, 7)
+}
+
+/** A month ("2026-09") as calendar cells, Monday first: a null per blank before the 1st, then each day. */
+export function monthCells(month: string): (string | null)[] {
+  const [year, index] = month.split('-').map(Number)
+  const blanks = (new Date(Date.UTC(year, index - 1, 1)).getUTCDay() + 6) % 7
+  const length = new Date(Date.UTC(year, index, 0)).getUTCDate()
+  return [...Array<null>(blanks).fill(null), ...Array.from({ length }, (_, day) => `${month}-${pad(day + 1)}`)]
+}
 
 /**
  * "19.09.2026" (in `format`'s day/month/year order) → "2026-09-19", or null if it isn't a real date.
