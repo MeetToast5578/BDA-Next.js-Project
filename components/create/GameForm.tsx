@@ -60,6 +60,7 @@ const API_ERRORS: Record<string, { field?: Field; message: string }> = {
   PHONE_REQUIRED: { field: 'hostPhone', message: 'Host telefon nömrəsi tələb olunur.' },
   MAX_COUNT_BELOW_PLAYERS: { field: 'maxCount', message: 'Oyunda artıq bu qədər oyunçu var — limiti aşağı sala bilməzsiniz.' },
   NOT_GAME_HOST: { message: 'Yalnız oyunun hostu bu oyunu dəyişə bilər.' },
+  GAME_STARTED: { message: 'Oyun artıq başlayıb — onu dəyişmək və ya silmək mümkün deyil.' },
   GAME_NOT_FOUND: { message: 'Oyun tapılmadı.' },
   INVALID_SPORT: { message: 'İdman növünü seçin.' },
   INVALID_LEVEL: { message: 'Oyun səviyyəsini seçin.' },

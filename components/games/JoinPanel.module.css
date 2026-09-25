@@ -186,3 +186,17 @@
 .back:disabled {
   opacity: 0.5;
 }
+
+/* A game that has started: what happened, and the viewer's part in it. */
+.past {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pastNote {
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--color-muted);
+  text-align: center;
+}

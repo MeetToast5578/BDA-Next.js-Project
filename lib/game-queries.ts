@@ -9,6 +9,7 @@ import {
   deriveAvailability,
   foldForSearch,
   initialsOf,
+  isUpcoming,
   normalizeGameRecord,
   normalizePhone,
   normalizeVenue,
@@ -191,7 +192,7 @@ export async function findGames(query: GameListQuery, now = new Date()) {
 
   const games = result.docs
     .map((doc) => toGameCard(normalizeGameRecord(doc, now.getTime())))
-    .filter((game) => game.status !== 'closed')
+    .filter((game) => isUpcoming(game.status))
 
   return {
     games,

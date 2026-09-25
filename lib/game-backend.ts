@@ -1,6 +1,6 @@
 // Pure game logic shared by the API routes, collections and tests. No Payload or Next imports here.
 
-export type AvailabilityStatus = 'open' | 'full' | 'closed' | 'live' | 'finished' | 'cancelled'
+export type AvailabilityStatus = 'open' | 'full' | 'live' | 'finished' | 'cancelled'
 
 type Doc = Record<string, unknown>
 
@@ -13,11 +13,17 @@ export const CITY_OPTIONS = [{ label: 'Bakı', value: 'baku' }]
 const CITY_ALIASES: Record<string, string> = { baku: 'baku', bakı: 'baku', baki: 'baku' }
 const CITY_LABELS: Record<string, string> = Object.fromEntries(CITY_OPTIONS.map(({ label, value }) => [value, label]))
 
-/** `maxPlayers` is the most a game of that sport can have: two full sides (11, 5 and 2 a side). */
-export const SPORT_META: Record<string, { label: string; iconKey: string; image: string; maxPlayers: number }> = {
-  football: { label: 'Futbol', iconKey: 'football', image: '/images/game-football-1-7880cc.png', maxPlayers: 22 },
-  basketball: { label: 'Basketbol', iconKey: 'basketball', image: '/images/game-basketball-1-4a0ddf.png', maxPlayers: 10 },
-  tennis: { label: 'Tennis', iconKey: 'tennis', image: '/images/game-tennis-1-3ee73d.png', maxPlayers: 4 },
+/**
+ * `maxPlayers` is the most a game of that sport can have: two full sides (11, 5 and 2 a side).
+ * `durationMinutes` is how long a game usually lasts; after that it counts as played (`finished`).
+ */
+export const SPORT_META: Record<
+  string,
+  { label: string; iconKey: string; image: string; maxPlayers: number; durationMinutes: number }
+> = {
+  football: { label: 'Futbol', iconKey: 'football', image: '/images/game-football-1-7880cc.png', maxPlayers: 22, durationMinutes: 90 },
+  basketball: { label: 'Basketbol', iconKey: 'basketball', image: '/images/game-basketball-1-4a0ddf.png', maxPlayers: 10, durationMinutes: 60 },
+  tennis: { label: 'Tennis', iconKey: 'tennis', image: '/images/game-tennis-1-3ee73d.png', maxPlayers: 4, durationMinutes: 90 },
 }
 export const SPORTS = Object.keys(SPORT_META)
 
@@ -29,6 +35,11 @@ export const LEVEL_LABELS: Record<string, string> = {
   beginner: 'Başlanğıc',
   medium: 'Orta səviyyə',
   high: 'Yüksək',
+}
+
+/** Not started yet: can still be joined, left, edited or deleted by its host. */
+export function isUpcoming(status: AvailabilityStatus) {
+  return status === 'open' || status === 'full'
 }
 
 export const FEATURED_LIMIT = 8
@@ -85,6 +96,10 @@ function toCount(value: unknown) {
 /**
  * The single source of truth for whether a game can be joined. Clients must use the returned
  * `status` / `remainingSpots` instead of re-deriving them from the player counts.
+ *
+ * A game moves along with the clock, not by a job writing to it: `open`/`full` until it starts,
+ * `live` for the sport's usual length (`SPORT_META.durationMinutes`), then `finished`. A status
+ * stored on the game — cancelled, or one an admin set — always wins.
  */
 export function deriveAvailability(raw: unknown, now = Date.now()) {
   const game = asDoc(raw) ?? {}
@@ -96,7 +111,8 @@ export function deriveAvailability(raw: unknown, now = Date.now()) {
   if (game.status === 'cancelled' || game.status === 'finished' || game.status === 'live') {
     status = game.status
   } else if (startsAt <= now) {
-    status = 'closed'
+    const { durationMinutes } = SPORT_META[String(game.sport)] ?? SPORT_META.football
+    status = now < startsAt + durationMinutes * 60_000 ? 'live' : 'finished'
   } else {
     status = remainingSpots > 0 ? 'open' : 'full'
   }

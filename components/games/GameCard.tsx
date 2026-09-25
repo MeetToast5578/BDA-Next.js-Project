@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
 import type { GameCard as GameCardData } from '@/lib/api-types'
+import { isUpcoming } from '@/lib/game-backend'
 import { buttonClass } from '@/components/ui/button'
 import { Icon } from '@/components/ui/Icon'
 import { Avatar, LevelBadge, ProgressBar, SportBadge } from './bits'
@@ -14,9 +15,6 @@ import { STATUS_LABELS } from './sports'
  * ones, so offering to join them would be wrong; `past` games have nothing left to do.
  */
 export type GameCardContext = 'browse' | 'joined' | 'hosting' | 'past'
-
-/** Games whose details the host can still change (the edit page refuses the rest). */
-const EDITABLE = new Set(['open', 'full'])
 
 export function GameCard({
   game,
@@ -125,10 +123,12 @@ export function GameCard({
 
 function CardAction({ game, href, context }: { game: GameCardData; href: string; context: GameCardContext }) {
   if (context === 'past') {
-    return <span className={buttonClass('muted', 'sm')}>{game.status === 'cancelled' ? 'Ləğv edilib' : 'Keçmiş oyun'}</span>
+    const label = game.status === 'cancelled' ? 'Ləğv edilib' : game.status === 'live' ? 'Davam edir' : 'Keçmiş oyun'
+    return <span className={buttonClass('muted', 'sm')}>{label}</span>
   }
 
-  if (context === 'hosting' && EDITABLE.has(game.status)) {
+  // The edit page refuses a game that has started.
+  if (context === 'hosting' && isUpcoming(game.status)) {
     return (
       <Link
         href={`${href}/edit`}

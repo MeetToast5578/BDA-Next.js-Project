@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { apiError } from '@/lib/api-response'
-import { parseEditGameBody } from '@/lib/game-backend'
+import { isUpcoming, parseEditGameBody } from '@/lib/game-backend'
 import { deleteGame, getGameDetail, getGameHostId, getPayloadClient, updateGame } from '@/lib/game-queries'
 
 /** "Oyun Detalı". Signing in is optional; it only affects `viewer` and whether the host's phone is shown. */
@@ -40,11 +40,20 @@ async function authorizeHost(request: Request, rawId: string) {
   const hostId = await getGameHostId(gameId)
   if (hostId === null) return { error: apiError('GAME_NOT_FOUND', 'Oyun tapılmadı.', 404) } as const
 
-  const isOwner = hostId === Number(user.id) || (user as { role?: string }).role === 'admin'
+  const isAdmin = (user as { role?: string }).role === 'admin'
+  const isOwner = hostId === Number(user.id) || isAdmin
   if (!isOwner) return { error: apiError('NOT_GAME_HOST', 'Yalnız oyunun hostu bu oyunu dəyişə bilər.', 403) } as const
 
-  return { gameId, userId: Number(user.id) } as const
+  return { gameId, userId: Number(user.id), isAdmin } as const
 }
+
+/**
+ * A game that has started is part of its players' history — their past games and stats — so it is
+ * no longer the host's to change. Without this a host could move last week's game into the future
+ * and revive it, players and all.
+ */
+const gameStarted = () =>
+  apiError('GAME_STARTED', 'Oyun artıq başlayıb — onu dəyişmək və ya silmək mümkün deyil.', 409)
 
 /** "Oyunu redaktə et". Host only; the players already in are untouched. */
 export async function PATCH(
@@ -57,6 +66,8 @@ export async function PATCH(
 
     const existing = await getGameDetail(auth.gameId, auth.userId)
     if (!existing) return apiError('GAME_NOT_FOUND', 'Oyun tapılmadı.', 404)
+    // Admins included: the admin panel is where a past game is corrected.
+    if (!isUpcoming(existing.status)) return gameStarted()
 
     const parsed = parseEditGameBody(await request.json().catch(() => null), existing.currentCount)
     if (!parsed.ok) return apiError(parsed.code, parsed.message, 400)
@@ -71,7 +82,7 @@ export async function PATCH(
   }
 }
 
-/** "Oyunu sil". Host only; removes the game and everyone's place in it. */
+/** "Oyunu sil". Host only, until the game starts (admins any time); removes it and everyone's place in it. */
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -79,6 +90,12 @@ export async function DELETE(
   try {
     const auth = await authorizeHost(request, (await params).id)
     if ('error' in auth) return auth.error
+
+    if (!auth.isAdmin) {
+      const game = await getGameDetail(auth.gameId, auth.userId)
+      if (!game) return apiError('GAME_NOT_FOUND', 'Oyun tapılmadı.', 404)
+      if (!isUpcoming(game.status)) return gameStarted()
+    }
 
     await deleteGame(auth.gameId)
     return NextResponse.json({ ok: true, id: String(auth.gameId) })

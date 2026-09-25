@@ -37,12 +37,17 @@ Joining and creating games require a signed-in account. The create form asks for
 
 Every game carries a server-computed `status` and `remainingSpots` (`lib/game-backend.ts` → `deriveAvailability`). Display these; never recompute them from the counts.
 
+The status follows the clock; no job writes it. A game is `open`/`full` until its start, `live` for
+the sport's usual length (`SPORT_META.durationMinutes`: football 90, basketball 60, tennis 90
+minutes), then `finished`. A status stored on the game (`cancelled`, or one an admin sets) wins.
+Once a game has started it is part of its players' history: it can no longer be joined, left,
+edited, or deleted by its host.
+
 | `status`    | Meaning                                          | Joinable |
 | ----------- | ------------------------------------------------ | -------- |
 | `open`      | Upcoming and at least one spot left              | yes      |
 | `full`      | Upcoming, no spots left                          | no       |
-| `closed`    | Start time has passed but status not yet updated | no       |
-| `live`      | In progress                                      | no       |
+| `live`      | Started, and within the sport's usual length     | no       |
 | `finished`  | Over                                             | no       |
 | `cancelled` | Cancelled                                        | no       |
 
@@ -205,16 +210,18 @@ spots move when `maxCount` changes.
 | 401    | `UNAUTHENTICATED`         | Not signed in                                                 |
 | 403    | `NOT_GAME_HOST`           | Signed in, but not this game's host                           |
 | 404    | `GAME_NOT_FOUND`          |                                                               |
+| 409    | `GAME_STARTED`            | The game has started (admins too: they correct it in `/admin`) |
 
 ## `DELETE /api/v1/games/{id}`
 
-"Oyunu sil". **Host only** (admins too). Deletes the game and every participant row pointing at it —
+"Oyunu sil". **Host only** (admins too), and for the host only until the game starts: after that it
+is in its players' past games and stats, so only an admin can delete it (`409 GAME_STARTED`). Deletes the game and every participant row pointing at it —
 the foreign key is `ON DELETE SET NULL`, so the participants have to be removed explicitly or they
 are left orphaned and keep turning up in counts. Both happen in one transaction.
 
 Join attempts are kept: `join_attempts.gameId` is a plain number, so the audit log survives the game.
 
-**200** returns `{ "ok": true, "id": "12" }`. Errors are the `401` / `403` / `404` rows above.
+**200** returns `{ "ok": true, "id": "12" }`. Errors are the `401` / `403` / `404` / `409` rows above.
 
 ## `POST /api/v1/games/{id}/join`
 

@@ -5,7 +5,7 @@ import { useEffect, useId, useState, useTransition } from 'react'
 
 import { ApiError, postJson } from '@/lib/api-client'
 import type { CurrentUser, GameDetail } from '@/lib/api-types'
-import { normalizePhone } from '@/lib/game-backend'
+import { isUpcoming, normalizePhone } from '@/lib/game-backend'
 import { formatLocalPhone, PHONE_ERROR, PHONE_PREFIX } from '@/lib/phone'
 import { phoneSource, type PhoneSource } from '@/lib/profile-form'
 import { loginHref } from '@/lib/safe-redirect'
@@ -23,9 +23,6 @@ import { STATUS_LABELS } from './sports'
 
 /** Errors after which the page data is stale (spot taken, already a player, game closed). */
 const REFRESH_ON = new Set(['ALREADY_JOINED', 'GAME_FULL', 'GAME_NOT_JOINABLE'])
-
-/** A game that hasn't started, which a player may still leave. */
-const LEAVABLE = new Set(['open', 'full'])
 
 const NAME_ERROR = 'Ad və soyadınızı daxil edin.'
 
@@ -139,9 +136,31 @@ export function JoinPanel({ game, user, autoOpen }: { game: GameDetail; user: Cu
       </p>
     ) : null
 
+  const live = game.status === 'live'
+  const played = live || game.status === 'finished'
+
   return (
     <>
-      {game.viewer.isHost ? (
+      {played ? (
+        // Past the start nothing can be joined, left or changed any more; say what happened instead.
+        <div className={styles.past}>
+          <p className={styles.state}>
+            {live && <span className={styles.activeDot} aria-hidden="true" />}
+            {live ? 'Oyun davam edir' : `Oyun keçirilib · ${game.dateLabel}`}
+          </p>
+          {(game.viewer.isHost || joined) && (
+            <p className={styles.pastNote}>
+              {game.viewer.isHost
+                ? live
+                  ? 'Bu oyunun hostu sizsiniz.'
+                  : 'Bu oyunu siz təşkil etdiniz.'
+                : live
+                  ? 'Siz bu oyundasınız. Oyun başladığı üçün artıq ondan çıxmaq mümkün deyil.'
+                  : 'Siz bu oyunda iştirak etdiniz.'}
+            </p>
+          )}
+        </div>
+      ) : game.viewer.isHost ? (
         <p className={styles.state}>Bu oyunun hostu sizsiniz</p>
       ) : joined ? (
         <>
@@ -152,7 +171,7 @@ export function JoinPanel({ game, user, autoOpen }: { game: GameDetail; user: Cu
             Siz bu oyuna qoşulmusunuz
           </p>
           {/* Until kick-off a player can give the spot back; the refresh after it shows "Qoşul" again. */}
-          {LEAVABLE.has(game.status) && (
+          {isUpcoming(game.status) && (
             <LeaveGame
               gameId={game.id}
               onLeft={() => {
