@@ -259,16 +259,21 @@ html:has(dialog[open]) {
  * `.fade` only fades: use it around anything with position: fixed inside, which a transform would
  * pin to the animating box instead of the viewport. Both leave no styles behind once they finish.
  */
+/*
+ * Entrance fades start at 0.01, not 0: Chrome doesn't count a fully transparent element as painted
+ * until its fade ends, which would add the whole animation to the page's load time (LCP). The first
+ * frame looks the same. Every page-load fade in the app follows this.
+ */
 @keyframes fade-up {
   from {
-    opacity: 0;
+    opacity: 0.01;
     transform: translateY(var(--rise, 12px));
   }
 }
 
 @keyframes fade-in {
   from {
-    opacity: 0;
+    opacity: 0.01;
   }
 }
 

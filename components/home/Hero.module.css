@@ -139,7 +139,7 @@
 
 @keyframes rise {
   from {
-    opacity: 0;
+    opacity: 0.01; /* not 0: see fade-up in globals.css */
     transform: translateY(14px);
   }
 }
