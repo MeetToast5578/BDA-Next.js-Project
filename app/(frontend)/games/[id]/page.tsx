@@ -153,7 +153,15 @@ async function GameDetailContent({ params, searchParams }: Props) {
           </h2>
           <div className={styles.host}>
             <Avatar person={host} size={42} decorative />
-            <p className={styles.hostName}>{host.name}</p>
+            <p className={styles.hostName}>
+              {host.id ? (
+                <Link href={`/users/${host.id}`} className={styles.hostLink}>
+                  {host.name}
+                </Link>
+              ) : (
+                host.name
+              )}
+            </p>
           </div>
           {host.phone ? (
             <>

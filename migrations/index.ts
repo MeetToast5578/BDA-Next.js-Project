@@ -1,5 +1,6 @@
 import * as migration_20260920_195825_baseline from './20260920_195825_baseline';
 import * as migration_20260923_210137_arena_image_path from './20260923_210137_arena_image_path';
+import * as migration_20260925_065346_media_uploaded_by from './20260925_065346_media_uploaded_by';
 
 export const migrations = [
   {
@@ -10,6 +11,11 @@ export const migrations = [
   {
     up: migration_20260923_210137_arena_image_path.up,
     down: migration_20260923_210137_arena_image_path.down,
-    name: '20260923_210137_arena_image_path'
+    name: '20260923_210137_arena_image_path',
+  },
+  {
+    up: migration_20260925_065346_media_uploaded_by.up,
+    down: migration_20260925_065346_media_uploaded_by.down,
+    name: '20260925_065346_media_uploaded_by'
   },
 ];

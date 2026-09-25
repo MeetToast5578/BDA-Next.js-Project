@@ -241,13 +241,28 @@
   padding-top: 16px;
 }
 
+/* The signed-in chip: avatar and first name, linking to "Profilim". */
 .user {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 3px 14px 3px 3px;
+  border-radius: var(--radius-pill);
   font-size: 14px;
   font-weight: 500;
   color: var(--color-ink);
+  transition:
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.user:hover {
+  background: var(--color-primary-tint);
+}
+
+.user[aria-current='page'] {
+  background: var(--color-primary-tint);
+  box-shadow: inset 0 0 0 1.5px var(--color-primary-border);
 }
 
 .userName {
@@ -271,6 +286,11 @@
 
   .userName {
     display: none;
+  }
+
+  /* Just the avatar in a ring. */
+  .user {
+    padding: 3px;
   }
 }
 
@@ -318,4 +338,8 @@
 /* In the menu there is room for the name the bar hides on narrow screens. */
 .menuSession .userName {
   display: inline;
+}
+
+.menuSession .user {
+  padding-right: 14px;
 }

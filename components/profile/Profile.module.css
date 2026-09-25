@@ -1,0 +1,438 @@
+/*
+ * The profile pages (/profile and /users/[id]). Panels, tabs, the back link and section headings
+ * come from the modules that already define them (GameDetail, SportTabs, GamesSection); this file
+ * holds the layout around them and the parts only a profile has. Values follow those pages.
+ */
+
+/* Page rhythm of "Bütün oyunlar": 44px between sections. */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 44px;
+  padding-block: 32px 96px;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.introText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* The create/edit form's page title. */
+.title {
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 49px;
+  letter-spacing: -0.01em;
+  color: var(--color-heading);
+}
+
+.subtitle {
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--color-muted);
+}
+
+/* Identity beside stats, in the game page's column ratio. */
+.overview {
+  display: grid;
+  grid-template-columns: minmax(0, 701fr) minmax(0, 495fr);
+  gap: 20px;
+}
+
+/*
+ * Identity panel. It is also a GameDetail `.panel` (a flex column), and which of two equally specific
+ * rules wins depends on stylesheet order, so the overrides are scoped under the grid they sit in.
+ */
+.overview > .identity {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.identityText {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding-top: 6px;
+}
+
+.name {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-heading);
+  overflow-wrap: anywhere;
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-text);
+}
+
+.facts li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+}
+
+.email {
+  overflow-wrap: anywhere;
+}
+
+.phone {
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+.muted {
+  color: var(--color-muted);
+}
+
+/* "Əlavə et" beside a missing phone number: a link-styled button. */
+.inlineAction {
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.inlineAction:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* The picture row at the top of "Profili redaktə et". */
+.pictureRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.pictureText {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pictureActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.identityActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+/* The "your own profile" note on /users/[id]. */
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: -24px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-md);
+  background: var(--color-primary-tint);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-text);
+}
+
+.noticeLink {
+  border-radius: 4px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.noticeLink:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Stats panel */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(var(--tiles, 3), minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+/* The label comes first in the markup and shows under the number. In a reversed column, flex-end is
+   the top, so numbers stay level when a label wraps to two lines. */
+.tile {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* The game page's participant count. */
+.tileValue {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--color-heading);
+}
+
+.tileLabel {
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--color-muted);
+}
+
+.divider {
+  width: 100%;
+  margin: 4px 0;
+  border: 0;
+  border-top: 1px solid var(--color-primary-border-soft);
+}
+
+.sports {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sport {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr) 3ch;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.sportLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--color-heading);
+  white-space: nowrap;
+}
+
+/* The participants bar on the game page. */
+.sportBar {
+  --progress-height: 8px;
+  --progress-track: var(--color-track-warm);
+}
+
+.sportCount {
+  font-weight: 700;
+  color: var(--color-heading);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.statsEmpty {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--color-muted);
+}
+
+/* Games section */
+.games {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.list {
+  transition:
+    opacity 0.2s ease,
+    filter 0.2s ease;
+}
+
+/* A tab was chosen and its games are on the way: fade the old ones back, as the sport tabs do. */
+.games:has(nav[data-pending]) .list {
+  opacity: 0.45;
+  filter: saturate(0.6);
+}
+
+.tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.roleTabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* "Qarşıdakı / Keçmiş": the create form's level picker, as links. */
+.segments {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 140px));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--color-primary-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.2s var(--ease-out);
+}
+
+.segment:hover {
+  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+  transform: translateY(-1px);
+}
+
+.segment:active {
+  transform: scale(0.98);
+}
+
+.segmentActive,
+.segmentActive:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: #fff;
+}
+
+/* Account section: the panel with "Çıxış", then the danger zone. */
+.account {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.account > .accountPanel {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+
+.accountText {
+  min-width: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.accountText strong {
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+/* The shared danger zone sits in this section's own rhythm. */
+.account > .dangerFlush {
+  margin-top: 0;
+}
+
+/* Hosted games on a public profile: the game grid without paging. */
+.hosted {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+@media (max-width: 859px) {
+  .overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .page {
+    gap: 32px;
+    padding-block: 24px 64px;
+  }
+
+  .title {
+    font-size: 30px;
+    line-height: 1.2;
+  }
+
+  .overview > .identity {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .identityText {
+    padding-top: 0;
+  }
+
+  .name {
+    font-size: 24px;
+  }
+
+  .tileValue {
+    font-size: 26px;
+  }
+
+  .sport {
+    grid-template-columns: 104px minmax(0, 1fr) 3ch;
+    gap: 10px;
+  }
+
+  .roleTabs {
+    gap: 10px;
+  }
+
+  .segments {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .notice {
+    margin-top: -16px;
+  }
+}

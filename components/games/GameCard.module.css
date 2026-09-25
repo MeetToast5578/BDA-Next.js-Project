@@ -180,6 +180,19 @@
   white-space: nowrap;
 }
 
+/* The host's name opens their profile. It sits above the title link that covers the card. */
+.hostLink {
+  position: relative;
+  z-index: 2;
+  border-radius: 4px;
+}
+
+.hostLink:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .action {
   position: relative;
   z-index: 2;

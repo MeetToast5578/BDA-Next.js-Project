@@ -1,9 +1,11 @@
+import { sql, type PostgresAdapter } from '@payloadcms/db-postgres'
 import type { Payload, Where } from 'payload'
 
 import { invalidateGamesCache } from '@/lib/cache-tags'
 import {
   SPORT_META,
   SPORTS,
+  formatBakuMonthYear,
   initialsOf,
   normalizeGameRecord,
   toGameCard,
@@ -27,6 +29,14 @@ function upcomingWhere(when: MyGamesQuery['when'], now: Date): Where {
   return when === 'upcoming'
     ? { and: [{ scheduledAt: { greater_than: now.toISOString() } }, { status: { equals: 'scheduled' } }] }
     : { scheduledAt: { less_than_equal: now.toISOString() } }
+}
+
+/**
+ * Games that count as played in the stats: over, and not called off. The "past" lists still show
+ * cancelled games, labelled as such, but nobody played them.
+ */
+function playedWhere(now: Date): Where {
+  return { and: [upcomingWhere('past', now), { status: { not_equals: 'cancelled' } }] }
 }
 
 /** Game ids this user holds a participant row for, newest participation first. */
@@ -112,7 +122,10 @@ export async function findMyGames(userId: number, query: MyGamesQuery, now = new
   }
 }
 
-/** How many games the user hosts and has joined, split by whether they are still to come. */
+/**
+ * How many games the user hosts and has joined. The upcoming counts match the "Qarşıdakı" lists; the
+ * past ones (`hostedPast`, `played`) leave out cancelled games, which nobody played.
+ */
 async function countGames(payload: Payload, userId: number, now: Date) {
   const joinedIds = await participatedGameIds(payload, userId)
   const notHostedByMe: Where[] = [{ host: { not_equals: userId } }]
@@ -120,22 +133,25 @@ async function countGames(payload: Payload, userId: number, now: Date) {
   const count = async (where: Where) =>
     (await payload.count({ collection: 'games', where, overrideAccess: true })).totalDocs
 
-  const joinedWhere = (when: MyGamesQuery['when']): Where =>
+  const joinedWhere = (window: Where): Where =>
     joinedIds.length === 0
       ? { id: { equals: -1 } }
-      : { and: [{ id: { in: joinedIds } }, ...notHostedByMe, upcomingWhere(when, now)] }
+      : { and: [{ id: { in: joinedIds } }, ...notHostedByMe, window] }
 
   const [hostingUpcoming, hostedPast, joinedUpcoming, played] = await Promise.all([
     count({ and: [{ host: { equals: userId } }, upcomingWhere('upcoming', now)] }),
-    count({ and: [{ host: { equals: userId } }, upcomingWhere('past', now)] }),
-    count(joinedWhere('upcoming')),
-    count(joinedWhere('past')),
+    count({ and: [{ host: { equals: userId } }, playedWhere(now)] }),
+    count(joinedWhere(upcomingWhere('upcoming', now))),
+    count(joinedWhere(playedWhere(now))),
   ])
 
   return { hostingUpcoming, hostedPast, joinedUpcoming, played, joinedIds }
 }
 
-/** Games actually played, broken down by sport, for the profile's stats strip. */
+/**
+ * Games actually played, hosted or joined, broken down by sport, for the profile's stats panel.
+ * The per-sport counts add up to `played + hostedPast`.
+ */
 async function playedBySport(payload: Payload, userId: number, joinedIds: number[], now: Date) {
   const counts = Object.fromEntries(SPORTS.map((sport) => [sport, 0])) as Record<string, number>
   const ids = joinedIds.length ? joinedIds : []
@@ -145,7 +161,7 @@ async function playedBySport(payload: Payload, userId: number, joinedIds: number
     where: {
       and: [
         { or: [{ host: { equals: userId } }, ...(ids.length ? [{ id: { in: ids } } as Where] : [])] },
-        upcomingWhere('past', now),
+        playedWhere(now),
       ],
     },
     select: { sport: true },
@@ -193,13 +209,22 @@ export async function getMyProfile(userId: number, now = new Date()) {
     phoneNumber: user.phoneNumber ?? null,
     avatarUrl: userAvatarUrl(user),
     memberSince: user.createdAt,
+    memberSinceLabel: formatBakuMonthYear(user.createdAt),
+    /** An uploaded picture is set, so "Şəkli sil" has something to remove (the Google one can't be). */
+    hasUploadedPicture: relationId(user.profilePicture) !== null,
+    /** What `avatarUrl` falls back to once the uploaded picture is removed. */
+    googleAvatarUrl: user.avatarUrl?.trim() || null,
     counts: {
       hostingUpcoming: counts.hostingUpcoming,
       hostedPast: counts.hostedPast,
       joinedUpcoming: counts.joinedUpcoming,
       played: counts.played,
     },
-    stats: { playedBySport: bySport },
+    stats: {
+      /** Every game played, hosted or joined: the sum of `playedBySport`. */
+      totalPlayed: bySport.reduce((sum, sport) => sum + sport.playedCount, 0),
+      playedBySport: bySport,
+    },
   }
 }
 
@@ -207,19 +232,54 @@ export type MyProfile = NonNullable<Awaited<ReturnType<typeof getMyProfile>>>
 
 type UpdateResult = { ok: true; profile: MyProfile } | { ok: false; code: string; message: string }
 
-/** Applies a validated profile edit. Phone numbers are unique, so a clash is reported as such. */
+/** The id behind a relationship value, populated or not. */
+function relationId(value: unknown) {
+  const id = value && typeof value === 'object' ? (value as { id?: unknown }).id : value
+  return typeof id === 'number' ? id : null
+}
+
+/** Deletes uploads, file and all. Best effort: a leftover file must never fail what came before it. */
+async function deleteUploads(payload: Payload, where: Where) {
+  try {
+    await payload.delete({ collection: 'media', where, overrideAccess: true })
+  } catch (error) {
+    console.error('Failed to delete uploads', error)
+  }
+}
+
+/**
+ * Applies a validated profile edit. Phone numbers are unique, so a clash is reported as such.
+ *
+ * A picture must be one this user uploaded: any other id — a venue photo, someone else's avatar —
+ * is answered as if it did not exist, which also keeps quiet about what does. The picture it
+ * replaces, if this user uploaded it, is deleted: nothing else can point at it, and it is theirs.
+ */
 export async function updateMyProfile(userId: number, update: ProfileUpdate): Promise<UpdateResult> {
   const payload = await getPayloadClient()
 
-  if (update.profilePictureId != null) {
+  const current = await payload.findByID({
+    collection: 'users',
+    id: userId,
+    select: { profilePicture: true },
+    depth: 0,
+    overrideAccess: true,
+    disableErrors: true,
+  })
+  if (!current) return { ok: false, code: 'USER_NOT_FOUND', message: 'İstifadəçi tapılmadı.' }
+  const currentPictureId = relationId(current.profilePicture)
+
+  if (update.profilePictureId != null && update.profilePictureId !== currentPictureId) {
     const media = await payload.findByID({
       collection: 'media',
       id: update.profilePictureId,
+      select: { uploadedBy: true },
       depth: 0,
       overrideAccess: true,
       disableErrors: true,
     })
-    if (!media) return { ok: false, code: 'MEDIA_NOT_FOUND', message: 'Şəkil tapılmadı.' }
+    if (!media || relationId(media.uploadedBy) !== userId) {
+      return { ok: false, code: 'MEDIA_NOT_FOUND', message: 'Şəkil tapılmadı.' }
+    }
   }
 
   if (update.phone) {
@@ -249,6 +309,11 @@ export async function updateMyProfile(userId: number, update: ProfileUpdate): Pr
   // The host's name and picture are shown on every card they host.
   invalidateGamesCache()
 
+  const replacedPicture = update.profilePictureId !== undefined && update.profilePictureId !== currentPictureId
+  if (replacedPicture && currentPictureId !== null) {
+    await deleteUploads(payload, { and: [{ id: { equals: currentPictureId } }, { uploadedBy: { equals: userId } }] })
+  }
+
   const profile = await getMyProfile(userId)
   if (!profile) return { ok: false, code: 'USER_NOT_FOUND', message: 'İstifadəçi tapılmadı.' }
   return { ok: true, profile }
@@ -260,7 +325,8 @@ export async function updateMyProfile(userId: number, update: ProfileUpdate): Pr
  * `games.host_id` and `game_participants.user_id` are both ON DELETE SET NULL, so removing the user
  * alone would leave hosted games with no host — a required field — which nobody could then edit or
  * delete, still listed and still carrying a contact number. Their games go with them, and so do the
- * participant rows of those games and this user's own participations. One transaction, all or nothing.
+ * participant rows of those games and this user's own participations, whose spots in upcoming games
+ * are handed back. One transaction, all or nothing. Their uploaded pictures are deleted afterwards.
  */
 export async function deleteMyAccount(userId: number) {
   const payload = await getPayloadClient()
@@ -274,6 +340,15 @@ export async function deleteMyAccount(userId: number) {
     overrideAccess: true,
   })
   const hostedIds = hosted.docs.map((doc) => doc.id)
+  const uploads = await payload.find({
+    collection: 'media',
+    where: { uploadedBy: { equals: userId } },
+    select: { alt: true },
+    depth: 0,
+    pagination: false,
+    overrideAccess: true,
+  })
+  const uploadIds = uploads.docs.map((doc) => doc.id)
 
   const transactionID = (await payload.db.beginTransaction()) ?? undefined
   const req = { transactionID }
@@ -287,8 +362,22 @@ export async function deleteMyAccount(userId: number) {
       })
       await payload.delete({ collection: 'games', where: { id: { in: hostedIds } }, overrideAccess: true, req })
     }
-    // Spots this user held in other people's games. Those games keep their size; the freed places
-    // are not handed back, the same as when an admin removes a participant.
+    // Spots this user held in other people's games that have not started go back to those games, as
+    // if they had left each one ("Oyundan çıx"); past games keep their numbers as they were played.
+    // Runs before the participant rows go, since it finds the games through them. LEAST keeps a
+    // game from ever showing more free spots than it has places.
+    const adapter = payload.db as unknown as PostgresAdapter
+    const db = (transactionID !== undefined ? adapter.sessions[String(transactionID)]?.db : undefined) ?? adapter.drizzle
+    await db.execute(sql`
+      UPDATE games
+      SET available_players = LEAST(games.available_players + 1, games.max_players), updated_at = now()
+      FROM game_participants
+      WHERE game_participants.game_id = games.id
+        AND game_participants.user_id = ${userId}
+        AND games.host_id IS DISTINCT FROM ${userId}
+        AND games.status = 'scheduled'
+        AND games.scheduled_at > now()
+    `)
     await payload.delete({
       collection: 'game-participants',
       where: { user: { equals: userId } },
@@ -302,6 +391,10 @@ export async function deleteMyAccount(userId: number) {
     throw error
   }
   invalidateGamesCache()
+  // Their pictures go too. After the commit, because deleting an upload also deletes its files, which
+  // no transaction can bring back; `uploadedBy` is ON DELETE SET NULL, so they are found by the ids
+  // collected before.
+  if (uploadIds.length > 0) await deleteUploads(payload, { id: { in: uploadIds } })
 
   return { deletedGames: hostedIds.length }
 }
@@ -335,7 +428,7 @@ export async function getPublicProfile(userId: number, now = new Date()) {
     }),
     payload.count({
       collection: 'games',
-      where: { and: [{ host: { equals: userId } }, upcomingWhere('past', now)] },
+      where: { and: [{ host: { equals: userId } }, playedWhere(now)] },
       overrideAccess: true,
     }),
   ])
@@ -344,9 +437,11 @@ export async function getPublicProfile(userId: number, now = new Date()) {
   return {
     id: String(user.id),
     fullName,
+    firstName: fullName.split(/\s+/)[0],
     initials: initialsOf(fullName),
     avatarUrl: userAvatarUrl(user),
     memberSince: user.createdAt,
+    memberSinceLabel: formatBakuMonthYear(user.createdAt),
     counts: { hostingUpcoming: hosting.totalDocs, hostedPast: hostedPast.totalDocs },
     hostedGames: hosting.docs.map((doc) => toGameCard(normalizeGameRecord(doc, now.getTime()))),
   }

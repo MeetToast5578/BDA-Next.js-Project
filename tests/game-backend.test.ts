@@ -5,6 +5,7 @@ import {
   deriveAvailability,
   foldForSearch,
   formatBakuLabel,
+  formatBakuMonthYear,
   formatBakuShortDate,
   initialsOf,
   normalizeCity,
@@ -15,7 +16,9 @@ import {
   parseEditGameBody,
   parseGameListParams,
   parseMyGamesParams,
+  parseProfileTabs,
   parseProfileUpdate,
+  profileTabsQuery,
   rankFeatured,
   startOfBakuDay,
   toGameCard,
@@ -127,6 +130,18 @@ describe('formatBakuShortDate', () => {
     // 21:30 UTC Thursday is 01:30 Friday in Baku.
     expect(formatBakuShortDate('2026-09-17T21:30:00Z')).toBe('Cüm, 18 Sen')
     expect(formatBakuShortDate(null)).toBeNull()
+  })
+})
+
+describe('formatBakuMonthYear', () => {
+  it('names the month of the Baku calendar day', () => {
+    expect(formatBakuMonthYear('2026-02-11T09:12:00Z')).toBe('fevral 2026')
+    // 21:00 UTC on 31 January is 01:00 on 1 February in Baku.
+    expect(formatBakuMonthYear('2026-01-31T21:00:00Z')).toBe('fevral 2026')
+    // And the year turns over on Baku's New Year's Eve, not London's.
+    expect(formatBakuMonthYear('2025-12-31T20:30:00Z')).toBe('yanvar 2026')
+    expect(formatBakuMonthYear(null)).toBeNull()
+    expect(formatBakuMonthYear('not a date')).toBeNull()
   })
 })
 
@@ -531,6 +546,34 @@ describe('parseMyGamesParams', () => {
   })
 })
 
+describe('parseProfileTabs / profileTabsQuery', () => {
+  it('reads the tab from the query and falls back to joined, upcoming', () => {
+    expect(parseProfileTabs({})).toEqual({ role: 'joined', when: 'upcoming' })
+    expect(parseProfileTabs({ games: 'hosting', when: 'past' })).toEqual({ role: 'hosting', when: 'past' })
+    // A mistyped or repeated parameter opens the default tab rather than an error page.
+    expect(parseProfileTabs({ games: 'everything', when: ['past', 'upcoming'] })).toEqual({
+      role: 'joined',
+      when: 'upcoming',
+    })
+  })
+
+  it('leaves the defaults out of the URL', () => {
+    expect(profileTabsQuery({ role: 'joined', when: 'upcoming' })).toBe('')
+    expect(profileTabsQuery({ role: 'hosting', when: 'upcoming' })).toBe('?games=hosting')
+    expect(profileTabsQuery({ role: 'joined', when: 'past' })).toBe('?when=past')
+    expect(profileTabsQuery({ role: 'hosting', when: 'past' })).toBe('?games=hosting&when=past')
+  })
+
+  it('round-trips', () => {
+    for (const role of ['joined', 'hosting'] as const) {
+      for (const when of ['upcoming', 'past'] as const) {
+        const query = Object.fromEntries(new URLSearchParams(profileTabsQuery({ role, when })))
+        expect(parseProfileTabs(query)).toEqual({ role, when })
+      }
+    }
+  })
+})
+
 describe('parseProfileUpdate', () => {
   it('normalizes the phone the same way the rest of the app does', () => {
     expect(parseProfileUpdate({ phone: '050 210 34 56' })).toEqual({
@@ -619,8 +662,14 @@ describe('normalizeGameRecord / toGameCard', () => {
         fullUrl: '/images/game-football-1-7880cc.png',
         fallbackUrl: '/images/game-football-1-7880cc.png',
       },
-      host: { name: 'Elvin Məmmədov', initials: 'EM', avatarUrl: '/api/media/file/elvin.png' },
+      host: { id: '1', name: 'Elvin Məmmədov', initials: 'EM', avatarUrl: '/api/media/file/elvin.png' },
     })
+  })
+
+  it("carries the host's id for the profile link, populated or not", () => {
+    expect(normalizeGameRecord({ ...raw, host: 12 }, NOW).host).toMatchObject({ id: '12', name: 'OyunaGəl istifadəçisi' })
+    // ON DELETE SET NULL: a game whose host account is gone has nobody to link to.
+    expect(normalizeGameRecord({ ...raw, host: null }, NOW).host.id).toBeNull()
   })
 
   it('never exposes the host email as their name', () => {

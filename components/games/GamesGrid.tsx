@@ -3,17 +3,20 @@
 import { useRef, useState, type CSSProperties } from 'react'
 
 import { apiFetch, withQuery } from '@/lib/api-client'
-import type { GameListResponse } from '@/lib/api-types'
+import type { GamePage } from '@/lib/api-types'
 import { buttonClass } from '@/components/ui/button'
-import { GameCard } from './GameCard'
+import { GameCard, type GameCardContext } from './GameCard'
 import styles from './GamesGrid.module.css'
 import { gridViewState } from './grid-state'
 
 /**
  * Game cards with "Daha çox" / "Az göstər". The list opens at the page size it was given and each
- * "Daha çox" reveals one more page, fetching from `GET /api/v1/games` only when those games aren't
- * loaded yet — so collapsing and expanding again costs no request. "Az göstər" appears once the
- * visitor has expanded and returns the list to its opening size.
+ * "Daha çox" reveals one more page, fetching from `endpoint` only when those games aren't loaded
+ * yet — so collapsing and expanding again costs no request. "Az göstər" appears once the visitor has
+ * expanded and returns the list to its opening size.
+ *
+ * `query` is sent with every page (filters, the list window), so each page reads the same list the
+ * first one came from. Plain strings rather than a fetch function, because this is a client component.
  *
  * Remount it (via `key`) when the filters change. Only rendered when there is at least one game —
  * the caller shows the empty state itself, so its markup never has to cross into this client
@@ -21,15 +24,16 @@ import { gridViewState } from './grid-state'
  */
 export function GamesGrid({
   initial,
-  sport,
-  to,
+  endpoint = '/api/v1/games',
+  query = {},
   cardHeadingLevel,
+  cardContext,
 }: {
-  initial: GameListResponse
-  sport: string | null
-  /** Upper bound of the list window, passed through so every page uses the same one. */
-  to?: string
+  initial: GamePage
+  endpoint?: string
+  query?: Record<string, string | null | undefined>
   cardHeadingLevel?: 'h2' | 'h3'
+  cardContext?: GameCardContext
 }) {
   const [games, setGames] = useState(initial.games)
   const [pagination, setPagination] = useState(initial.pagination)
@@ -60,8 +64,8 @@ export function GamesGrid({
     setLoading(true)
     setError(null)
     try {
-      const next = await apiFetch<GameListResponse>(
-        withQuery('/api/v1/games', { page: pagination.page + 1, limit: pagination.limit, sport, to }),
+      const next = await apiFetch<GamePage>(
+        withQuery(endpoint, { ...query, page: pagination.page + 1, limit: pagination.limit }),
       )
       // A game can shift pages if one before it started in the meantime.
       const seen = new Set(games.map((game) => game.id))
@@ -92,7 +96,7 @@ export function GamesGrid({
         {shown.map((game, index) => (
           // Each batch ("Daha çox" adds one) staggers in from its own first card.
           <li key={game.id} className="reveal" style={{ '--i': index % step } as CSSProperties}>
-            <GameCard game={game} priority={index < 3} headingLevel={cardHeadingLevel} />
+            <GameCard game={game} priority={index < 3} headingLevel={cardHeadingLevel} context={cardContext} />
           </li>
         ))}
       </ul>

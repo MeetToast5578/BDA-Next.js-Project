@@ -46,6 +46,21 @@ const BAKU_OFFSET_MS = 4 * HOUR_MS
 // Short forms as used on the game cards ("Cüm, 2 Avq"); ICU's az-AZ short forms ("B.", "avq") differ.
 const WEEKDAYS_SHORT = ['Baz', 'B.e.', 'Ç.a.', 'Çər', 'C.a.', 'Cüm', 'Şən']
 const MONTHS_SHORT = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'İyn', 'İyl', 'Avq', 'Sen', 'Okt', 'Noy', 'Dek']
+// Spelled out rather than taken from ICU, so the label is the same whatever ICU build the server runs.
+const MONTHS_LONG = [
+  'yanvar',
+  'fevral',
+  'mart',
+  'aprel',
+  'may',
+  'iyun',
+  'iyul',
+  'avqust',
+  'sentyabr',
+  'oktyabr',
+  'noyabr',
+  'dekabr',
+]
 
 function asDoc(value: unknown): Doc | null {
   return value && typeof value === 'object' ? (value as Doc) : null
@@ -137,6 +152,14 @@ export function formatBakuShortDate(dateInput?: string | Date | null) {
 export function formatBakuTime(dateInput?: string | Date | null) {
   const date = toDate(dateInput)
   return date ? bakuTime.format(date) : null
+}
+
+/** "fevral 2026", the Baku calendar month, for "Qeydiyyat: fevral 2026" on a profile. */
+export function formatBakuMonthYear(dateInput?: string | Date | null) {
+  const date = toDate(dateInput)
+  if (!date) return null
+  const baku = new Date(date.getTime() + BAKU_OFFSET_MS)
+  return `${MONTHS_LONG[baku.getUTCMonth()]} ${baku.getUTCFullYear()}`
 }
 
 function capitalize(text: string) {
@@ -366,6 +389,8 @@ export function normalizeGameRecord(raw: unknown, now = Date.now()) {
   const level = String(game.level ?? 'medium')
   const host = asDoc(game.host)
   const hostName = nonEmptyString(host?.fullName) ?? DEFAULT_HOST_NAME
+  // Populated or not, the relationship still names the host, which is what a profile link needs.
+  const hostId = host ? host.id : game.host
   const startsAt = game.scheduledAt ? String(game.scheduledAt) : null
 
   return {
@@ -383,6 +408,8 @@ export function normalizeGameRecord(raw: unknown, now = Date.now()) {
     ...deriveAvailability(game, now),
     cover: resolveCoverImage(game, sportMeta.image),
     host: {
+      /** For linking to `/users/{id}`; null only for a game whose host account is gone. */
+      id: typeof hostId === 'number' || typeof hostId === 'string' ? String(hostId) : null,
       name: hostName,
       initials: initialsOf(hostName),
       avatarUrl: userAvatarUrl(host),
@@ -541,6 +568,31 @@ export function parseMyGamesParams(params: URLSearchParams): ParseOk<MyGamesQuer
       limit: clampInt(params.get('limit'), GAMES_DEFAULT_LIMIT, 1, GAMES_MAX_LIMIT),
     },
   }
+}
+
+type SearchParamsRecord = Record<string, string | string[] | undefined>
+
+/**
+ * The profile's "Mənim oyunlarım" tabs from `?games=joined|hosting&when=upcoming|past`. Unlike the
+ * API params, anything unknown falls back to the default tab: a stale or mistyped link still opens
+ * the page instead of failing.
+ */
+export function parseProfileTabs(params: SearchParamsRecord): { role: ProfileRole; when: ProfileWindow } {
+  const pick = <T extends string>(value: unknown, options: readonly T[], fallback: T) =>
+    typeof value === 'string' && options.includes(value as T) ? (value as T) : fallback
+  return {
+    role: pick(params.games, PROFILE_ROLES, 'joined'),
+    when: pick(params.when, PROFILE_WINDOWS, 'upcoming'),
+  }
+}
+
+/** The query string for a profile tab, leaving the defaults out so the plain `/profile` stays canonical. */
+export function profileTabsQuery({ role, when }: { role: ProfileRole; when: ProfileWindow }) {
+  const params = new URLSearchParams()
+  if (role !== 'joined') params.set('games', role)
+  if (when !== 'upcoming') params.set('when', when)
+  const query = params.toString()
+  return query ? `?${query}` : ''
 }
 
 export const MAX_FULL_NAME_LENGTH = 120
