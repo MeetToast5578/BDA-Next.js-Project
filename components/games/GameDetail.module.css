@@ -2,21 +2,13 @@
   padding-block: 34px 96px;
 }
 
-.back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border-radius: 4px;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 16px;
-  color: var(--color-muted);
+/* The back link's look comes from buttonClass (via BackLink); this only nudges its arrow. */
+.back > span {
+  transition: transform 0.2s var(--ease-out);
 }
 
-.back:hover {
-  color: var(--color-ink);
-  text-decoration: underline;
-  text-underline-offset: 3px;
+.back:hover > span {
+  transform: translateX(-3px);
 }
 
 .pageTitle {
@@ -173,15 +165,30 @@
   color: var(--color-heading);
 }
 
-/* The host's name opens their profile. */
+/* The whole host row opens their profile, drawn as an outline button to match "Geri qayıt". */
 .hostLink {
-  border-radius: 4px;
+  padding: 10px 16px 10px 10px;
+  border: 1px solid var(--color-ink);
+  border-radius: var(--radius-sm);
+  transition: background-color 0.2s ease;
 }
 
 .hostLink:hover {
-  color: var(--color-primary);
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  background: rgba(20, 27, 43, 0.06);
+}
+
+.hostLink:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+.hostArrow {
+  margin-left: auto;
+  color: var(--color-ink);
+  transition: transform 0.2s var(--ease-out);
+}
+
+.hostLink:hover .hostArrow {
+  transform: translateX(3px);
 }
 
 .hostNote {
@@ -204,7 +211,8 @@
   color: var(--color-primary);
 }
 
-.phone:hover {
+/* Only the tap-to-call link reacts; the host's own number is plain text. */
+a.phone:hover {
   background: color-mix(in srgb, var(--color-primary) 10%, transparent);
 }
 

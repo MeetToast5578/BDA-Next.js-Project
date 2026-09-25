@@ -2,6 +2,8 @@
   --slide-w: min(512px, calc(100vw - 72px));
   --slide-gap: 32px;
   --side-scale: 0.777;
+  /* How far a neighbour slides inwards: the width it lost by shrinking, halved (one per side). */
+  --side-pull: calc((1 - var(--side-scale)) * var(--slide-w) / 2);
   position: relative;
   /* Above the hero's background blooms. */
   z-index: 1;
@@ -37,36 +39,44 @@
 }
 
 /*
- * Neighbours shrink towards the centred card, so the visual gap stays at --slide-gap. The scale is a
- * scroll-driven animation: it tracks the scroll position itself, off the main thread, so it never lags
- * a swipe or pops at a threshold. Browsers without scroll-driven animations show every card full size.
- * It scales the ticket, never the slide: snap positions come from the slide's transformed box, so a
- * scaled slide would snap off-centre.
+ * Neighbours shrink and slide inwards so every visual gap stays at --slide-gap, at rest and mid-swipe.
+ * Each shrunk card frees 2 × --side-pull of width, so a card n slots out slides in by
+ * (2n - 1) × --side-pull: linear in its position, which a scroll-driven animation expresses exactly.
+ * The range spans 8 slots each way so even ultrawide screens only ever show cards inside it; beyond,
+ * the fill would hold the last offset and a gap would reappear.
+ * The animation tracks the scroll position itself, off the main thread, so it never lags a swipe or
+ * pops at a threshold. Browsers without scroll-driven animations show every card full size.
+ * It moves the ticket, never the slide: snap positions come from the slide's transformed box, so a
+ * transformed slide would snap off-centre.
  */
 @supports (animation-timeline: view()) {
   .ticket {
     animation: slide-focus linear both;
     /* Both must follow the shorthand, which resets them. */
     animation-timeline: view(inline);
-    /* 0% = one card right of centre, 50% = centred, 100% = one card left of centre. */
+    /* 0% = eight slots right of centre, 50% = centred, 100% = eight slots left of centre. */
     animation-range:
-      cover calc(50% - var(--slide-w) - var(--slide-gap))
-      cover calc(50% + var(--slide-w) + var(--slide-gap));
+      cover calc(50% - 8 * (var(--slide-w) + var(--slide-gap)))
+      cover calc(50% + 8 * (var(--slide-w) + var(--slide-gap)));
   }
 }
 
+/* 43.75% / 56.25% are one slot either side of centre (50% ∓ 1/16). */
 @keyframes slide-focus {
   from {
-    transform: scale(var(--side-scale));
-    transform-origin: left center;
+    transform: translateX(calc(-15 * var(--side-pull))) scale(var(--side-scale));
+  }
+  43.75% {
+    transform: translateX(calc(-1 * var(--side-pull))) scale(var(--side-scale));
   }
   50% {
     transform: none;
-    transform-origin: center;
+  }
+  56.25% {
+    transform: translateX(var(--side-pull)) scale(var(--side-scale));
   }
   to {
-    transform: scale(var(--side-scale));
-    transform-origin: right center;
+    transform: translateX(calc(15 * var(--side-pull))) scale(var(--side-scale));
   }
 }
 
@@ -89,7 +99,8 @@
   background: var(--glass-bg);
   transition:
     border-color 0.25s ease,
-    background-color 0.25s ease;
+    background-color 0.25s ease,
+    scale 0.25s var(--ease-out);
 }
 
 .ticketTop {
@@ -158,14 +169,12 @@
   border-radius: var(--radius-md);
 }
 
-.ticketTitle a:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
+/* `scale`, not `transform`: the focus animation owns `transform`, and the two compose. The track's
+   12px block padding leaves room for the grown card. */
 .ticket:hover {
   border-color: rgba(255, 255, 255, 0.28);
   background: rgba(255, 255, 255, 0.2);
+  scale: 1.03;
 }
 
 .ticketTitle a:focus-visible {

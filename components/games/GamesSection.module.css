@@ -17,22 +17,7 @@
   align-self: stretch;
 }
 
-.back {
-  display: inline-flex;
-  gap: 6px;
-  border-radius: 4px;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 16px;
-  color: var(--color-muted);
-}
-
-.back:hover {
-  color: var(--color-ink);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
+/* `.back` and `.seeAll` get their look from buttonClass; these rules only nudge the arrow. */
 .back > span {
   transition: transform 0.2s var(--ease-out);
 }
@@ -94,20 +79,7 @@
 }
 
 .seeAll {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding-block: 4px;
-  border-radius: 4px;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--color-primary);
   white-space: nowrap;
-}
-
-.seeAll:hover {
-  text-decoration: underline;
-  text-underline-offset: 4px;
 }
 
 .seeAll > span {

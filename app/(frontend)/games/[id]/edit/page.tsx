@@ -6,6 +6,7 @@ import { BackLink } from '@/components/games/BackLink'
 import { GameForm } from '@/components/create/GameForm'
 import styles from '@/components/create/GameForm.module.css'
 import { GameFormSkeleton } from '@/components/games/skeletons'
+import { buttonClass } from '@/components/ui/button'
 import { formatBakuDateKey, isUpcoming } from '@/lib/game-backend'
 import { getGameDetail } from '@/lib/game-queries'
 import { loginHref } from '@/lib/safe-redirect'
@@ -27,7 +28,7 @@ export default function EditGamePage({ params }: Props) {
       {/* The link needs the game id from the URL; its text stands in for the split second before. */}
       <Suspense
         fallback={
-          <span className={styles.back} aria-hidden="true">
+          <span className={buttonClass('outlineDark', 'sm')} aria-hidden="true">
             ← Oyuna qayıt
           </span>
         }

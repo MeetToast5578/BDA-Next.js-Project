@@ -13,7 +13,7 @@ import { SportTabs } from './SportTabs'
 /** "← Ana səhifəyə qayıt" above the "Bütün oyunlar" title (and in its loading placeholder). */
 export function BackHomeLink() {
   return (
-    <Link href="/" className={styles.back}>
+    <Link href="/" className={buttonClass('outlineDark', 'sm', { className: styles.back })}>
       <span aria-hidden="true">←</span> Ana səhifəyə qayıt
     </Link>
   )
@@ -83,7 +83,7 @@ export function GamesSection({
       </div>
       {when && <GamesWhenLinks when={when} sport={sport} />}
       {seeAllHref && (
-        <Link href={seeAllHref} className={styles.seeAll}>
+        <Link href={seeAllHref} className={buttonClass('outlinePrimary', 'sm', { className: styles.seeAll })}>
           Hamısına bax <span aria-hidden="true">→</span>
         </Link>
       )}
